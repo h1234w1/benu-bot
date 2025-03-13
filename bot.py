@@ -13,16 +13,16 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "/training - Training sessions\n"
         "/ask - Ask us anything\n"
         "/network - Connect with startups\n"
-        "/news - Latest announcements"
+        "/news - Latest announcements\n"
+        "/contact - Reach us"
     )
 
 async def resources(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "Resources for Startups:\n"
-        "1. High Energy Biscuit Production Guide - Tips on fortification and scaling [Link Soon]\n"
-        "2. Market Research Summary - Gaps in Ethiopia’s biscuit supply chain [Link Soon]\n"
-        "3. Packaging Design Tips - Quality packaging on a budget [Link Soon]\n"
-        "Stay tuned for downloadable files!"
+        "1. High Energy Biscuit Production Guide - https://drive.google.com/file/d/1HTr62gOcWHEU76-OXDnzJRf11l7nXKPv/view?usp=drive_link\n"
+        "2. Market Research Summary - Gaps in Ethiopia’s biscuit supply chain: https://drive.google.com/file/d/1HTr62gOcWHEU76-OXDnzJRf11l7nXKPv/view?usp=drive_link\n"
+        "3. Packaging Design Tips - Quality packaging on a budget: https://drive.google.com/file/d/1HTr62gOcWHEU76-OXDnzJRf11l7nXKPv/view?usp=drive_link"
     )
 
 async def training(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -48,10 +48,10 @@ async def network(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "Startup Network:\n"
         "1. XYZ Biscuits - Addis Ababa\n"
         "   - Focus: Fortified snacks\n"
-        "   - Contact: [Email soon]\n"
+        "   - Contact: xyz@example.com\n"
         "2. ABC Foods - Oromia\n"
         "   - Focus: Local ingredient sourcing\n"
-        "   - Contact: [Email soon]\n"
+        "   - Contact: abc@example.com\n"
         "Want to join? Reply /joinnetwork"
     )
 
@@ -59,13 +59,21 @@ async def news(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "Latest Announcements:\n"
         "1. March 12, 2025: Benu secured ETB 2.9M from SWR Ethiopia to boost high-energy biscuit production.\n"
-        "2. April 2025: Market research completed—new insights soon!\n"
+        "2. April 10, 2025: First training session held—29 saleswomen trained!\n"
         "3. May 2025: New production line launches, doubling capacity.\n"
-        "4. Networking Event: May 15, 2025—details via /training.\n"
-        "Stay tuned!"
+        "4. Networking Event: May 15, 2025—details via /training."
     )
 
-# Handle signup and joinnetwork replies (basic for now)
+# New command: /contact
+async def contact(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text(
+        "Contact Us:\n"
+        "Email: benu@example.com\n"
+        "Phone: +251921756683\n"
+        "Address: Addis Ababa, Bole Sub city, Woreda 03, H.N. 4/10/A5/FL8"
+    )
+
+# Handle replies
 async def handle_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text.lower()
     if text == "/signup":
@@ -84,6 +92,7 @@ def main():
     application.add_handler(CommandHandler("ask", ask))
     application.add_handler(CommandHandler("network", network))
     application.add_handler(CommandHandler("news", news))
+    application.add_handler(CommandHandler("contact", contact))  # New command
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_reply))
     
     # Run with webhook
