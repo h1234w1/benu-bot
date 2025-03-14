@@ -7,9 +7,12 @@ import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
-# Google Sheets setup
+# Google Sheets setup with debug
 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-creds_json = json.loads(os.environ.get("GOOGLE_CREDENTIALS", "{}"))
+creds_json_raw = os.environ.get("GOOGLE_CREDENTIALS", "{}")
+print(f"Raw GOOGLE_CREDENTIALS: {creds_json_raw}")  # Debug output
+creds_json = json.loads(creds_json_raw)
+print(f"Parsed creds_json: {creds_json}")  # Debug output
 creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_json, scope)
 client = gspread.authorize(creds)
 sheet = client.open("BenuBotData")
