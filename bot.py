@@ -5,7 +5,7 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandler, filters, CallbackQueryHandler
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
-from apscheduler.schedulers.async_ import AsyncScheduler
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 # Google Sheets setup
 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
@@ -17,7 +17,7 @@ training_sheet = sheet.worksheet("TrainingSignups")
 network_sheet = sheet.worksheet("NetworkingRegistrations")
 
 # Scheduler for notifications
-scheduler = AsyncScheduler()
+scheduler = AsyncIOScheduler()
 scheduler.start()
 
 # Manager’s Telegram ID (replace with yours or a bot’s ID)
