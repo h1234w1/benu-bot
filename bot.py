@@ -31,6 +31,7 @@ UPCOMING_TRAININGS = [
 ]
 PAST_TRAININGS = [
     {"name": "Intro to Fortification", "date": "2025-03-10", "video": "https://youtube.com/example", "resources": "https://drive.google.com/example"},
+    {"name": "Biscuit Processing Techniques", "date": "2025-03-20", "video": "https://youtu.be/Q9TCM89oNfU?si=5Aia87X1csYSZ4g6", "resources": "https://drive.google.com/file/d/1HTr62gOcWHEU76-OXDnzJRf11l7nXKPv/view"},
 ]
 
 # Bot functions
@@ -61,7 +62,7 @@ async def resources(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def trainings(update: Update, context: ContextTypes.DEFAULT_TYPE):
     past_text = "Past Trainings:\n" + "\n".join(
-        f"- {t['name']} ({t['date']}): {t['video'] or 'No video'}, {t['resources'] or 'No resources'}"
+        f"- {t['name']} ({t['date']}): Video: {t['video'] or 'No video'}, Resources: {t['resources'] or 'No resources'}"
         for t in PAST_TRAININGS
     )
     upcoming_text = "Upcoming Trainings:\n" + "\n".join(
@@ -76,18 +77,33 @@ async def signup(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Please provide your full name:")
 
 async def networking(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    # Static list of companies for biscuit and agriculture sector
+    network_companies = {
+        "Biscuit Production": [
+            {"name": "EthioBiscuit Co.", "description": "Produces fortified biscuits", "contact": "+251912345678"},
+            {"name": "Benu Biscuits", "description": "Specializes in local biscuit varieties", "contact": "Private"}
+        ],
+        "Agriculture": [
+            {"name": "AgriGrow Ethiopia", "description": "Supplies wheat and grains", "contact": "+251987654321"},
+            {"name": "FarmTech Ltd.", "description": "Organic farming solutions", "contact": "Private"}
+        ]
+    }
+    
+    # Fetch dynamic data from Google Sheet
     network_data = network_sheet.get_all_records()
-    categories = {}
     for entry in network_data:
         for cat in entry["Categories"].split(","):
-            if cat not in categories:
-                categories[cat] = []
-            categories[cat].append(f"{entry['Company']} - {entry['Description']} - "
-                                  f"{'Contact: ' + entry['Phone'] if entry['PublicEmail'] == 'Yes' else 'Private'}")
-    
-    text = "Network by Category:\n"
-    for cat, entries in categories.items():
-        text += f"\n{cat}:\n" + "\n".join(f"- {entry}" for entry in entries)
+            if cat not in network_companies:
+                network_companies[cat] = []
+            network_companies[cat].append({"name": entry["Company"], "description": entry["Description"],
+                                           "contact": entry["Phone"] if entry["PublicEmail"] == "Yes" else "Private"})
+
+    text = "Network by Category (Biscuit & Agriculture Sector):\n"
+    for cat, companies in network_companies.items():
+        text += f"\n{cat}:\n" + "\n".join(
+            f"- {c['name']} | {c['description']} | Contact: {c['contact']}"
+            for c in companies
+        )
     text += "\n\nReply /register to join the network!"
     await update.message.reply_text(text)
 
@@ -172,10 +188,10 @@ async def handle_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
             context.user_data["manager"] = text
             context.user_data["register_step"] = "categories"
             keyboard = [
-                [InlineKeyboardButton("Food Production", callback_data="cat:Food Production"),
-                 InlineKeyboardButton("Packaging", callback_data="cat:Packaging")],
-                [InlineKeyboardButton("Marketing", callback_data="cat:Marketing"),
-                 InlineKeyboardButton("Sourcing", callback_data="cat:Sourcing")],
+                [InlineKeyboardButton("Biscuit Production", callback_data="cat:Biscuit Production"),
+                 InlineKeyboardButton("Agriculture", callback_data="cat:Agriculture")],
+                [InlineKeyboardButton("Packaging", callback_data="cat:Packaging"),
+                 InlineKeyboardButton("Marketing", callback_data="cat:Marketing")],
                 [InlineKeyboardButton("Done", callback_data="cat:done")]
             ]
             await update.message.reply_text("Select categories (click Done when finished):", reply_markup=InlineKeyboardMarkup(keyboard))
