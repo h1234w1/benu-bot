@@ -7,12 +7,10 @@ import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
-# Google Sheets setup with debug
+# Google Sheets setup
 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
 creds_json_raw = os.environ.get("GOOGLE_CREDENTIALS", "{}")
-print(f"Raw GOOGLE_CREDENTIALS: {creds_json_raw}")  # Debug output
 creds_json = json.loads(creds_json_raw)
-print(f"Parsed creds_json: {creds_json}")  # Debug output
 creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_json, scope)
 client = gspread.authorize(creds)
 sheet = client.open("BenuBotData")
@@ -40,11 +38,25 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "Welcome to Benu’s Startup Support Bot!\n"
         "Commands:\n"
+        "/ask - Ask a question\n"
+        "/resources - Access training resources\n"
         "/trainings - View trainings\n"
         "/networking - Join the network\n"
         "/news - Latest updates\n"
         "/contact - Reach us\n"
         "/subscribenews - News updates"
+    )
+
+async def ask(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("Please type your question, and I’ll do my best to assist you!")
+
+async def resources(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    past_resources = "\n".join(
+        f"- {t['name']} ({t['date']}): {t['resources'] or 'No resources available'}"
+        for t in PAST_TRAININGS if t.get("resources")
+    )
+    await update.message.reply_text(
+        "Available Training Resources:\n" + (past_resources or "No resources available yet.")
     )
 
 async def trainings(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -212,6 +224,8 @@ def main():
     
     # Add handlers
     app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("ask", ask))
+    app.add_handler(CommandHandler("resources", resources))
     app.add_handler(CommandHandler("trainings", trainings))
     app.add_handler(CommandHandler("signup", signup))
     app.add_handler(CommandHandler("networking", networking))
