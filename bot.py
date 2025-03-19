@@ -33,6 +33,38 @@ PAST_TRAININGS = [
     {"name": "Intro to Fortification", "date": "2025-03-10", "video": "https://youtube.com/example", "resources": "https://drive.google.com/example"},
     {"name": "Biscuit Processing Techniques", "date": "2025-03-20", "video": "https://youtu.be/Q9TCM89oNfU?si=5Aia87X1csYSZ4g6", "resources": "https://drive.google.com/file/d/1HTr62gOcWHEU76-OXDnzJRf11l7nXKPv/view"},
 ]
+TRAINING_MODULES = [
+    {
+        "id": 1,
+        "name": "Biscuit Production Basics",
+        "content": "Learn the essentials of biscuit production: ingredients, equipment, and quality control.",
+        "quiz": [
+            {"q": "What’s a key ingredient in biscuits?", "options": ["Sugar", "Salt", "Water"], "answer": "Sugar"},
+            {"q": "What equipment is vital for mixing?", "options": ["Oven", "Mixer", "Scale"], "answer": "Mixer"},
+            {"q": "What ensures product consistency?", "options": ["Taste", "Quality Control", "Packaging"], "answer": "Quality Control"}
+        ]
+    },
+    {
+        "id": 2,
+        "name": "Marketing for Startups",
+        "content": "Understand branding, target markets, and low-cost promotion strategies.",
+        "quiz": [
+            {"q": "What defines your brand?", "options": ["Logo", "Values", "Price"], "answer": "Values"},
+            {"q": "Who is your target market?", "options": ["Everyone", "Specific Group", "Competitors"], "answer": "Specific Group"},
+            {"q": "What’s a low-cost promotion?", "options": ["TV Ads", "Social Media", "Billboards"], "answer": "Social Media"}
+        ]
+    },
+    {
+        "id": 3,
+        "name": "Financial Planning",
+        "content": "Basics of budgeting, cash flow, and securing startup funds.",
+        "quiz": [
+            {"q": "What tracks income vs. expenses?", "options": ["Budget", "Loan", "Sales"], "answer": "Budget"},
+            {"q": "What’s key to cash flow?", "options": ["Profit", "Timing", "Debt"], "answer": "Timing"},
+            {"q": "Where can startups get funds?", "options": ["Friends", "Investors", "Savings"], "answer": "Investors"}
+        ]
+    }
+]
 
 # Language-specific messages
 MESSAGES = {
@@ -46,12 +78,15 @@ MESSAGES = {
         "news": "Latest updates",
         "contact": "Reach us",
         "subscribenews": "News updates",
+        "training_program": "Training Program",
+        "update_profile": "Update Profile",
         "ask_prompt": "Please type your question, and I’ll do my best to assist you!",
         "resources_title": "Available Training Resources:",
         "no_resources": "No resources available yet.",
         "trainings_past": "Past Trainings:",
         "trainings_upcoming": "Upcoming Trainings:",
         "signup_prompt": "Please provide your full name:",
+        "survey_company_size": "What’s your company size? (e.g., Small, Medium, Large):",
         "networking_title": "Network by Category (Biscuit & Agriculture Sector):",
         "register_prompt": "Please provide your company name:",
         "news_title": "Latest Announcements:",
@@ -67,6 +102,21 @@ MESSAGES = {
         "categories_prompt": "Select categories (click Done when finished):",
         "public_prompt": "Share email publicly? (Yes/No):",
         "cat_added": "Added {cat}. Select more or click Done:",
+        "modules_title": "Training Modules:",
+        "module_study": "Study: {name}\n{content}",
+        "quiz_start": "Test your knowledge for {name}:",
+        "quiz_question": "Q{num}: {q}",
+        "quiz_correct": "Correct! Moving to next question...",
+        "quiz_wrong": "Wrong. The answer was {answer}. Next question...",
+        "quiz_done": "Quiz complete! Score: {score}/{total}. Next module unlocked.",
+        "profile_prompt": "Select what to update:",
+        "profile_name": "New name:",
+        "profile_phone": "New phone:",
+        "profile_email": "New email:",
+        "profile_company": "New company:",
+        "profile_updated": "Profile updated!",
+        "survey_satisfaction": "How satisfied are you with the training? (1-5):",
+        "survey_thanks": "Thank you for your feedback!"
     },
     "am": {
         "welcome": "እንኳን ወደ ቤኑ ስታርትአፕ ድጋፍ ቦት በደህና መጡ!\nእባክዎ ቋንቋዎን ይምረጡ:",
@@ -78,12 +128,15 @@ MESSAGES = {
         "news": "የቅርብ ጊዜ ዜናዎች",
         "contact": "ያግኙን",
         "subscribenews": "የዜና ዝመናዎች",
+        "training_program": "ሥልጠና ፕሮግራም",
+        "update_profile": "መገለጫ ያሻሽሉ",
         "ask_prompt": "እባክዎ ጥያቄዎን ይፃፉ፣ እኔም መልካም መልስ ለመስጠት እሞክራለሁ!",
         "resources_title": "የሚገኙ ሥልጠና መሣሪያዎች:",
         "no_resources": "እስካሁን መሣሪያዎች የሉም።",
         "trainings_past": "ያለፉ ሥልጠናዎች:",
         "trainings_upcoming": "መጪ ሥልጠናዎች:",
         "signup_prompt": "እባክዎ ሙሉ ስምዎን ያስፈልጋል:",
+        "survey_company_size": "የኩባንያዎ መጠን ምንድን ነው? (ለምሳሌ፡ ትንሽ፣ መካከለኛ፣ ትልቅ):",
         "networking_title": "በምድብ መልክ ኔትወርክ (ቢስኩት እና ግብርና ዘርፍ):",
         "register_prompt": "እባክዎ የኩባንያዎን ስም ያስፈልጋል:",
         "news_title": "የቅርብ ጊዜ ማስታወቂያዎች:",
@@ -96,9 +149,24 @@ MESSAGES = {
         "company_prompt": "እባክዎ የኩባንያዎን ስም ያስፈልጋል:",
         "description_prompt": "እባክዎ የኩባንያዎ መግለጫ ያስፈልጋል:",
         "manager_prompt": "እባክዎ የሥራ አስኪያጁን ስም ያስፈልጋል:",
-        "categories_prompt": "ምድቦችን ይምረጡ (ጨርሰዋል የሚለውን ይጫኑ):",
+        "categories_prompt": "ምድቦችን ይምረጡ (ጨርሰዋል የሚለውᨍይጫኑ):",
         "public_prompt": "ኢሜልዎን በይፋ ይጋሩ? (አዎ/አይ):",
         "cat_added": "{cat} ታክሏል። ተጨማሪ ይምረጡ ወይም ጨርሰዋል ይጫኑ:",
+        "modules_title": "ሥልጠና ሞጁሎች:",
+        "module_study": "መማር: {name}\n{content}",
+        "quiz_start": "{name} ዕውቀትዎን ይፈትኑ:",
+        "quiz_question": "ጥ{num}: {q}",
+        "quiz_correct": "ትክክል! ወደ ቀጣዩ ጥያቄ መሄድ...",
+        "quiz_wrong": "ተሳስቷል። መልሱ {answer} ነበር። ቀጣዩ ጥያቄ...",
+        "quiz_done": "ፈተና ተጠናቋል! ነጥብ: {score}/{total}። ቀጣዩ ሞጁል ተከፍቷል።",
+        "profile_prompt": "ምን ማሻሻል ይፈልጋሉ?:",
+        "profile_name": "አዲስ ስም:",
+        "profile_phone": "አዲስ ስልክ:",
+        "profile_email": "አዲስ ኢሜል:",
+        "profile_company": "አዲስ ኩባንያ:",
+        "profile_updated": "መገለጫ ተሻሽሏል!",
+        "survey_satisfaction": "ሥልጠናው ምን ያህል እንደሚያረካዎት? (1-5):",
+        "survey_thanks": "ለአስተያየትዎ እናመሰግናለን!"
     }
 }
 
@@ -121,7 +189,9 @@ async def show_options(update: Update, context: ContextTypes.DEFAULT_TYPE, lang)
          InlineKeyboardButton(messages["networking"], callback_data="cmd:networking")],
         [InlineKeyboardButton(messages["news"], callback_data="cmd:news"),
          InlineKeyboardButton(messages["contact"], callback_data="cmd:contact")],
-        [InlineKeyboardButton(messages["subscribenews"], callback_data="cmd:subscribenews")]
+        [InlineKeyboardButton(messages["subscribenews"], callback_data="cmd:subscribenews"),
+         InlineKeyboardButton(messages["training_program"], callback_data="cmd:training_program")],
+        [InlineKeyboardButton(messages["update_profile"], callback_data="cmd:update_profile")]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     await update.callback_query.edit_message_text(messages["options"], reply_markup=reply_markup)
@@ -223,13 +293,43 @@ async def subscribenews(update: Update, context: ContextTypes.DEFAULT_TYPE):
         training_sheet.append_row([str(chat_id), "", "", "", "", datetime.now().isoformat()])
     await query.message.reply_text(MESSAGES[lang]["subscribed"])
 
+async def training_program(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    lang = context.user_data.get("lang", "en")
+    query = update.callback_query
+    completed = context.user_data.get("completed_modules", [])
+    keyboard = [
+        [InlineKeyboardButton(m["name"], callback_data=f"module:{m['id']}")]
+        for m in TRAINING_MODULES if m["id"] not in completed
+    ]
+    await query.message.reply_text(
+        MESSAGES[lang]["modules_title"],
+        reply_markup=InlineKeyboardMarkup(keyboard) if keyboard else None
+    )
+    if len(completed) == 2:  # Mid-training survey after module 2
+        await query.message.reply_text(MESSAGES[lang]["survey_satisfaction"])
+        context.user_data["survey_step"] = "mid"
+    elif len(completed) == len(TRAINING_MODULES):  # End survey
+        await query.message.reply_text(MESSAGES[lang]["survey_satisfaction"])
+        context.user_data["survey_step"] = "end"
+
+async def update_profile(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    lang = context.user_data.get("lang", "en")
+    query = update.callback_query
+    keyboard = [
+        [InlineKeyboardButton("Name", callback_data="profile:name"),
+         InlineKeyboardButton("Phone", callback_data="profile:phone")],
+        [InlineKeyboardButton("Email", callback_data="profile:email"),
+         InlineKeyboardButton("Company", callback_data="profile:company")]
+    ]
+    await query.message.reply_text(MESSAGES[lang]["profile_prompt"], reply_markup=InlineKeyboardMarkup(keyboard))
+
 # Handle multi-step replies
 async def handle_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.message.chat_id
     text = update.message.text
     lang = context.user_data.get("lang", "en")
 
-    # Training signup flow
+    # Training signup flow with survey
     if "signup_step" in context.user_data:
         step = context.user_data["signup_step"]
         if step == "name":
@@ -246,8 +346,12 @@ async def handle_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text(MESSAGES[lang]["company_prompt"])
         elif step == "company":
             context.user_data["company"] = text
+            context.user_data["signup_step"] = "survey"
+            await update.message.reply_text(MESSAGES[lang]["survey_company_size"])
+        elif step == "survey":
+            context.user_data["company_size"] = text
             data = [str(chat_id), context.user_data["name"], context.user_data["phone"],
-                    context.user_data["email"], context.user_data["company"], datetime.now().isoformat()]
+                    context.user_data["email"], context.user_data["company"], datetime.now().isoformat(), text]
             training_sheet.append_row(data)
             await context.bot.send_message(MANAGER_CHAT_ID, f"New Signup: {data[1:]}")
             await update.message.reply_text(MESSAGES[lang]["signup_thanks"].format(name=data[1]))
@@ -294,11 +398,64 @@ async def handle_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text(MESSAGES[lang]["register_thanks"].format(company=data[1]))
             del context.user_data["register_step"]
 
+    # Quiz answers
+    elif "quiz_step" in context.user_data:
+        step = context.user_data["quiz_step"]
+        module_id = context.user_data["quiz_module"]
+        module = next(m for m in TRAINING_MODULES if m["id"] == module_id)
+        question = module["quiz"][step - 1]
+        if text.lower() == question["answer"].lower():
+            await update.message.reply_text(MESSAGES[lang]["quiz_correct"])
+            context.user_data["quiz_score"] = context.user_data.get("quiz_score", 0) + 1
+        else:
+            await update.message.reply_text(MESSAGES[lang]["quiz_wrong"].format(answer=question["answer"]))
+        if step < len(module["quiz"]):
+            context.user_data["quiz_step"] += 1
+            next_q = module["quiz"][step]
+            keyboard = [[InlineKeyboardButton(opt, callback_data=f"quiz:{opt}")] for opt in next_q["options"]]
+            await update.message.reply_text(MESSAGES[lang]["quiz_question"].format(num=step + 1, q=next_q["q"]),
+                                            reply_markup=InlineKeyboardMarkup(keyboard))
+        else:
+            score = context.user_data.get("quiz_score", 0)
+            context.user_data["completed_modules"] = context.user_data.get("completed_modules", []) + [module_id]
+            await update.message.reply_text(MESSAGES[lang]["quiz_done"].format(score=score, total=len(module["quiz"])))
+            del context.user_data["quiz_step"]
+            del context.user_data["quiz_score"]
+
+    # Profile updates
+    elif "profile_step" in context.user_data:
+        step = context.user_data["profile_step"]
+        cell = training_sheet.find(str(chat_id))
+        if cell:
+            row = cell.row
+            if step == "name":
+                training_sheet.update_cell(row, 2, text)
+            elif step == "phone":
+                training_sheet.update_cell(row, 3, text)
+            elif step == "email":
+                training_sheet.update_cell(row, 4, text)
+            elif step == "company":
+                training_sheet.update_cell(row, 5, text)
+            await update.message.reply_text(MESSAGES[lang]["profile_updated"])
+            del context.user_data["profile_step"]
+
+    # Satisfactory survey
+    elif "survey_step" in context.user_data:
+        try:
+            rating = int(text)
+            if 1 <= rating <= 5:
+                await update.message.reply_text(MESSAGES[lang]["survey_thanks"])
+                del context.user_data["survey_step"]
+            else:
+                await update.message.reply_text("Please enter a number between 1 and 5.")
+        except ValueError:
+            await update.message.reply_text("Please enter a valid number (1-5).")
+
 async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
     lang = context.user_data.get("lang", "en")
-    print(f"Button clicked: {query.data}")  # Debug log
+    print(f"Button clicked: {query.data}")
 
     if "lang:" in query.data:
         lang_choice = query.data.split("lang:")[1]
@@ -312,12 +469,49 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "networking": networking,
             "news": news,
             "contact": contact,
-            "subscribenews": subscribenews
+            "subscribenews": subscribenews,
+            "training_program": training_program,
+            "update_profile": update_profile
         }
         if cmd in handlers:
             await handlers[cmd](update, context)
+    elif "module:" in query.data:
+        module_id = int(query.data.split("module:")[1])
+        module = next(m for m in TRAINING_MODULES if m["id"] == module_id)
+        await query.message.reply_text(MESSAGES[lang]["module_study"].format(name=module["name"], content=module["content"]))
+        keyboard = [[InlineKeyboardButton(opt, callback_data=f"quiz:{opt}")] for opt in module["quiz"][0]["options"]]
+        await query.message.reply_text(MESSAGES[lang]["quiz_start"].format(name=module["name"]))
+        await query.message.reply_text(MESSAGES[lang]["quiz_question"].format(num=1, q=module["quiz"][0]["q"]),
+                                       reply_markup=InlineKeyboardMarkup(keyboard))
+        context.user_data["quiz_step"] = 1
+        context.user_data["quiz_module"] = module_id
+    elif "quiz:" in query.data:
+        answer = query.data.split("quiz:")[1]
+        step = context.user_data["quiz_step"]
+        module_id = context.user_data["quiz_module"]
+        module = next(m for m in TRAINING_MODULES if m["id"] == module_id)
+        question = module["quiz"][step - 1]
+        if answer == question["answer"]:
+            await query.message.reply_text(MESSAGES[lang]["quiz_correct"])
+            context.user_data["quiz_score"] = context.user_data.get("quiz_score", 0) + 1
         else:
-            await query.message.reply_text("Command not recognized.")
+            await query.message.reply_text(MESSAGES[lang]["quiz_wrong"].format(answer=question["answer"]))
+        if step < len(module["quiz"]):
+            context.user_data["quiz_step"] += 1
+            next_q = module["quiz"][step]
+            keyboard = [[InlineKeyboardButton(opt, callback_data=f"quiz:{opt}")] for opt in next_q["options"]]
+            await query.message.reply_text(MESSAGES[lang]["quiz_question"].format(num=step + 1, q=next_q["q"]),
+                                           reply_markup=InlineKeyboardMarkup(keyboard))
+        else:
+            score = context.user_data.get("quiz_score", 0)
+            context.user_data["completed_modules"] = context.user_data.get("completed_modules", []) + [module_id]
+            await query.message.reply_text(MESSAGES[lang]["quiz_done"].format(score=score, total=len(module["quiz"])))
+            del context.user_data["quiz_step"]
+            del context.user_data["quiz_score"]
+    elif "profile:" in query.data:
+        field = query.data.split("profile:")[1]
+        context.user_data["profile_step"] = field
+        await query.message.reply_text(MESSAGES[lang][f"profile_{field}"])
     elif "cat:" in query.data:
         cat = query.data.split("cat:")[1]
         if cat == "done":
