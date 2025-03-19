@@ -38,30 +38,33 @@ TRAINING_MODULES = [
         "id": 1,
         "name": "Biscuit Production Basics",
         "content": "Learn the essentials of biscuit production: ingredients, equipment, and quality control.",
+        "prereq": [],
         "quiz": [
-            {"q": "What’s a key ingredient in biscuits?", "options": ["Sugar", "Salt", "Water"], "answer": "Sugar"},
-            {"q": "What equipment is vital for mixing?", "options": ["Oven", "Mixer", "Scale"], "answer": "Mixer"},
-            {"q": "What ensures product consistency?", "options": ["Taste", "Quality Control", "Packaging"], "answer": "Quality Control"}
+            {"q": "What’s a key ingredient in biscuits?", "options": ["Sugar", "Salt", "Water"], "answer": "Sugar", "explain": "Sugar is key for flavor and texture in biscuits."},
+            {"q": "What equipment is vital for mixing?", "options": ["Oven", "Mixer", "Scale"], "answer": "Mixer", "explain": "A mixer ensures uniform dough consistency."},
+            {"q": "What ensures product consistency?", "options": ["Taste", "Quality Control", "Packaging"], "answer": "Quality Control", "explain": "Quality control checks standards at every step."}
         ]
     },
     {
         "id": 2,
         "name": "Marketing for Startups",
         "content": "Understand branding, target markets, and low-cost promotion strategies.",
+        "prereq": [1],
         "quiz": [
-            {"q": "What defines your brand?", "options": ["Logo", "Values", "Price"], "answer": "Values"},
-            {"q": "Who is your target market?", "options": ["Everyone", "Specific Group", "Competitors"], "answer": "Specific Group"},
-            {"q": "What’s a low-cost promotion?", "options": ["TV Ads", "Social Media", "Billboards"], "answer": "Social Media"}
+            {"q": "What defines your brand?", "options": ["Logo", "Values", "Price"], "answer": "Values", "explain": "Values shape your brand’s identity and customer trust."},
+            {"q": "Who is your target market?", "options": ["Everyone", "Specific Group", "Competitors"], "answer": "Specific Group", "explain": "A specific group helps tailor your marketing effectively."},
+            {"q": "What’s a low-cost promotion?", "options": ["TV Ads", "Social Media", "Billboards"], "answer": "Social Media", "explain": "Social media reaches wide audiences cheaply."}
         ]
     },
     {
         "id": 3,
         "name": "Financial Planning",
         "content": "Basics of budgeting, cash flow, and securing startup funds.",
+        "prereq": [1, 2],
         "quiz": [
-            {"q": "What tracks income vs. expenses?", "options": ["Budget", "Loan", "Sales"], "answer": "Budget"},
-            {"q": "What’s key to cash flow?", "options": ["Profit", "Timing", "Debt"], "answer": "Timing"},
-            {"q": "Where can startups get funds?", "options": ["Friends", "Investors", "Savings"], "answer": "Investors"}
+            {"q": "What tracks income vs. expenses?", "options": ["Budget", "Loan", "Sales"], "answer": "Budget", "explain": "A budget plans your financial resources."},
+            {"q": "What’s key to cash flow?", "options": ["Profit", "Timing", "Debt"], "answer": "Timing", "explain": "Timing ensures money is available when needed."},
+            {"q": "Where can startups get funds?", "options": ["Friends", "Investors", "Savings"], "answer": "Investors", "explain": "Investors provide capital for growth."}
         ]
     }
 ]
@@ -73,18 +76,18 @@ MESSAGES = {
         "options": "Choose an option:",
         "ask": "Ask a question",
         "resources": "Access training resources",
-        "trainings": "View trainings",
+        "training_events": "Training Events",
         "networking": "Join the network",
         "news": "Latest updates",
         "contact": "Reach us",
         "subscribenews": "News updates",
-        "training_program": "Training Program",
+        "learn_startup_skills": "Learn Startup Skills",
         "update_profile": "Update Profile",
         "ask_prompt": "Please type your question, and I’ll do my best to assist you!",
         "resources_title": "Available Training Resources:",
         "no_resources": "No resources available yet.",
-        "trainings_past": "Past Trainings:",
-        "trainings_upcoming": "Upcoming Trainings:",
+        "trainings_past": "Past Training Events:",
+        "trainings_upcoming": "Upcoming Training Events:",
         "signup_prompt": "Please provide your full name:",
         "survey_company_size": "What’s your company size? (e.g., Small, Medium, Large):",
         "networking_title": "Network by Category (Biscuit & Agriculture Sector):",
@@ -102,13 +105,14 @@ MESSAGES = {
         "categories_prompt": "Select categories (click Done when finished):",
         "public_prompt": "Share email publicly? (Yes/No):",
         "cat_added": "Added {cat}. Select more or click Done:",
-        "modules_title": "Training Modules:",
+        "modules_title": "Startup Skills Modules:",
         "module_study": "Study: {name}\n{content}",
         "quiz_start": "Test your knowledge for {name}:",
         "quiz_question": "Q{num}: {q}",
-        "quiz_correct": "Correct! Moving to next question...",
-        "quiz_wrong": "Wrong. The answer was {answer}. Next question...",
+        "quiz_correct": "Correct!\nExplanation: {explain}",
+        "quiz_wrong": "Wrong. The answer was {answer}.\nExplanation: {explain}",
         "quiz_done": "Quiz complete! Score: {score}/{total}. Next module unlocked.",
+        "prereq_error": "Please complete the previous module(s) first.",
         "profile_prompt": "Select what to update:",
         "profile_name": "New name:",
         "profile_phone": "New phone:",
@@ -123,18 +127,18 @@ MESSAGES = {
         "options": "አማራጭ ይምረጡ:",
         "ask": "ጥያቄ ይጠይቁ",
         "resources": "ሥልጠና መሣሪያዎችን ይድረሱ",
-        "trainings": "ሥልጠናዎችን ይመልከቱ",
+        "training_events": "ሥልጠና ዝግጅቶች",
         "networking": "ኔትወርክ ይቀላቀሉ",
         "news": "የቅርብ ጊዜ ዜናዎች",
         "contact": "ያግኙን",
         "subscribenews": "የዜና ዝመናዎች",
-        "training_program": "ሥልጠና ፕሮግራም",
+        "learn_startup_skills": "የስታርትአፕ ክህሎቶችን ይማሩ",
         "update_profile": "መገለጫ ያሻሽሉ",
         "ask_prompt": "እባክዎ ጥያቄዎን ይፃፉ፣ እኔም መልካም መልስ ለመስጠት እሞክራለሁ!",
         "resources_title": "የሚገኙ ሥልጠና መሣሪያዎች:",
         "no_resources": "እስካሁን መሣሪያዎች የሉም።",
-        "trainings_past": "ያለፉ ሥልጠናዎች:",
-        "trainings_upcoming": "መጪ ሥልጠናዎች:",
+        "trainings_past": "ያለፉ ሥልጠና ዝግጅቶች:",
+        "trainings_upcoming": "መጪ ሥልጠና ዝግጅቶች:",
         "signup_prompt": "እባክዎ ሙሉ ስምዎን ያስፈልጋል:",
         "survey_company_size": "የኩባንያዎ መጠን ምንድን ነው? (ለምሳሌ፡ ትንሽ፣ መካከለኛ፣ ትልቅ):",
         "networking_title": "በምድብ መልክ ኔትወርክ (ቢስኩት እና ግብርና ዘርፍ):",
@@ -149,16 +153,17 @@ MESSAGES = {
         "company_prompt": "እባክዎ የኩባንያዎን ስም ያስፈልጋል:",
         "description_prompt": "እባክዎ የኩባንያዎ መግለጫ ያስፈልጋል:",
         "manager_prompt": "እባክዎ የሥራ አስኪያጁን ስም ያስፈልጋል:",
-        "categories_prompt": "ምድቦችን ይምረጡ (ጨርሰዋል የሚለውᨍይጫኑ):",
+        "categories_prompt": "ምድቦችን ይምረጡ (ጨርሰዋል የሚለውን ይጫኑ):",
         "public_prompt": "ኢሜልዎን በይፋ ይጋሩ? (አዎ/አይ):",
         "cat_added": "{cat} ታክሏል። ተጨማሪ ይምረጡ ወይም ጨርሰዋል ይጫኑ:",
-        "modules_title": "ሥልጠና ሞጁሎች:",
+        "modules_title": "የስታርትአፕ ክህሎት ሞጁሎች:",
         "module_study": "መማር: {name}\n{content}",
         "quiz_start": "{name} ዕውቀትዎን ይፈትኑ:",
         "quiz_question": "ጥ{num}: {q}",
-        "quiz_correct": "ትክክል! ወደ ቀጣዩ ጥያቄ መሄድ...",
-        "quiz_wrong": "ተሳስቷል። መልሱ {answer} ነበር። ቀጣዩ ጥያቄ...",
+        "quiz_correct": "ትክክል!\nማብራሪያ: {explain}",
+        "quiz_wrong": "ተሳስቷል። መልሱ {answer} ነበር።\nማብራሪያ: {explain}",
         "quiz_done": "ፈተና ተጠናቋል! ነጥብ: {score}/{total}። ቀጣዩ ሞጁል ተከፍቷል።",
+        "prereq_error": "እባክዎ ቀደም ሲል ያሉትን ሞጁሎች መጀመሪያ ይጨርሱ።",
         "profile_prompt": "ምን ማሻሻል ይፈልጋሉ?:",
         "profile_name": "አዲስ ስም:",
         "profile_phone": "አዲስ ስልክ:",
@@ -185,12 +190,12 @@ async def show_options(update: Update, context: ContextTypes.DEFAULT_TYPE, lang)
     keyboard = [
         [InlineKeyboardButton(messages["ask"], callback_data="cmd:ask"),
          InlineKeyboardButton(messages["resources"], callback_data="cmd:resources")],
-        [InlineKeyboardButton(messages["trainings"], callback_data="cmd:trainings"),
+        [InlineKeyboardButton(messages["training_events"], callback_data="cmd:training_events"),
          InlineKeyboardButton(messages["networking"], callback_data="cmd:networking")],
         [InlineKeyboardButton(messages["news"], callback_data="cmd:news"),
          InlineKeyboardButton(messages["contact"], callback_data="cmd:contact")],
         [InlineKeyboardButton(messages["subscribenews"], callback_data="cmd:subscribenews"),
-         InlineKeyboardButton(messages["training_program"], callback_data="cmd:training_program")],
+         InlineKeyboardButton(messages["learn_startup_skills"], callback_data="cmd:learn_startup_skills")],
         [InlineKeyboardButton(messages["update_profile"], callback_data="cmd:update_profile")]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
@@ -212,7 +217,7 @@ async def resources(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"{MESSAGES[lang]['resources_title']}\n" + (past_resources or MESSAGES[lang]["no_resources"])
     )
 
-async def trainings(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def training_events(update: Update, context: ContextTypes.DEFAULT_TYPE):
     lang = context.user_data.get("lang", "en")
     query = update.callback_query
     past_text = f"{MESSAGES[lang]['trainings_past']}\n" + "\n".join(
@@ -274,9 +279,9 @@ async def news(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await query.message.reply_text(
         f"{MESSAGES[lang]['news_title']}\n"
         "1. March 12, 2025: Benu secured ETB 2.9M from SWR Ethiopia.\n"
-        "2. April 10, 2025: First training held—29 saleswomen trained! See /trainings.\n"
+        "2. April 10, 2025: First training held—29 saleswomen trained! See /training_events.\n"
         "3. May 2025: New production line launches.\n"
-        "4. May 15, 2025: Networking Event—register at /networking or /trainings.\n"
+        "4. May 15, 2025: Networking Event—register at /networking or /training_events.\n"
         "Use /subscribenews for updates!"
     )
 
@@ -293,24 +298,14 @@ async def subscribenews(update: Update, context: ContextTypes.DEFAULT_TYPE):
         training_sheet.append_row([str(chat_id), "", "", "", "", datetime.now().isoformat()])
     await query.message.reply_text(MESSAGES[lang]["subscribed"])
 
-async def training_program(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def learn_startup_skills(update: Update, context: ContextTypes.DEFAULT_TYPE):
     lang = context.user_data.get("lang", "en")
     query = update.callback_query
-    completed = context.user_data.get("completed_modules", [])
     keyboard = [
         [InlineKeyboardButton(m["name"], callback_data=f"module:{m['id']}")]
-        for m in TRAINING_MODULES if m["id"] not in completed
+        for m in TRAINING_MODULES
     ]
-    await query.message.reply_text(
-        MESSAGES[lang]["modules_title"],
-        reply_markup=InlineKeyboardMarkup(keyboard) if keyboard else None
-    )
-    if len(completed) == 2:  # Mid-training survey after module 2
-        await query.message.reply_text(MESSAGES[lang]["survey_satisfaction"])
-        context.user_data["survey_step"] = "mid"
-    elif len(completed) == len(TRAINING_MODULES):  # End survey
-        await query.message.reply_text(MESSAGES[lang]["survey_satisfaction"])
-        context.user_data["survey_step"] = "end"
+    await query.message.reply_text(MESSAGES[lang]["modules_title"], reply_markup=InlineKeyboardMarkup(keyboard))
 
 async def update_profile(update: Update, context: ContextTypes.DEFAULT_TYPE):
     lang = context.user_data.get("lang", "en")
@@ -405,10 +400,10 @@ async def handle_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
         module = next(m for m in TRAINING_MODULES if m["id"] == module_id)
         question = module["quiz"][step - 1]
         if text.lower() == question["answer"].lower():
-            await update.message.reply_text(MESSAGES[lang]["quiz_correct"])
+            await update.message.reply_text(MESSAGES[lang]["quiz_correct"].format(explain=question["explain"]))
             context.user_data["quiz_score"] = context.user_data.get("quiz_score", 0) + 1
         else:
-            await update.message.reply_text(MESSAGES[lang]["quiz_wrong"].format(answer=question["answer"]))
+            await update.message.reply_text(MESSAGES[lang]["quiz_wrong"].format(answer=question["answer"], explain=question["explain"]))
         if step < len(module["quiz"]):
             context.user_data["quiz_step"] += 1
             next_q = module["quiz"][step]
@@ -421,6 +416,12 @@ async def handle_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text(MESSAGES[lang]["quiz_done"].format(score=score, total=len(module["quiz"])))
             del context.user_data["quiz_step"]
             del context.user_data["quiz_score"]
+            if len(context.user_data["completed_modules"]) == 2:  # Mid-training survey
+                await update.message.reply_text(MESSAGES[lang]["survey_satisfaction"])
+                context.user_data["survey_step"] = "mid"
+            elif len(context.user_data["completed_modules"]) == len(TRAINING_MODULES):  # End survey
+                await update.message.reply_text(MESSAGES[lang]["survey_satisfaction"])
+                context.user_data["survey_step"] = "end"
 
     # Profile updates
     elif "profile_step" in context.user_data:
@@ -465,12 +466,12 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
         handlers = {
             "ask": ask,
             "resources": resources,
-            "trainings": trainings,
+            "training_events": training_events,
             "networking": networking,
             "news": news,
             "contact": contact,
             "subscribenews": subscribenews,
-            "training_program": training_program,
+            "learn_startup_skills": learn_startup_skills,
             "update_profile": update_profile
         }
         if cmd in handlers:
@@ -478,13 +479,17 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif "module:" in query.data:
         module_id = int(query.data.split("module:")[1])
         module = next(m for m in TRAINING_MODULES if m["id"] == module_id)
-        await query.message.reply_text(MESSAGES[lang]["module_study"].format(name=module["name"], content=module["content"]))
-        keyboard = [[InlineKeyboardButton(opt, callback_data=f"quiz:{opt}")] for opt in module["quiz"][0]["options"]]
-        await query.message.reply_text(MESSAGES[lang]["quiz_start"].format(name=module["name"]))
-        await query.message.reply_text(MESSAGES[lang]["quiz_question"].format(num=1, q=module["quiz"][0]["q"]),
-                                       reply_markup=InlineKeyboardMarkup(keyboard))
-        context.user_data["quiz_step"] = 1
-        context.user_data["quiz_module"] = module_id
+        completed = context.user_data.get("completed_modules", [])
+        if all(prereq in completed for prereq in module["prereq"]):
+            await query.message.reply_text(MESSAGES[lang]["module_study"].format(name=module["name"], content=module["content"]))
+            keyboard = [[InlineKeyboardButton(opt, callback_data=f"quiz:{opt}")] for opt in module["quiz"][0]["options"]]
+            await query.message.reply_text(MESSAGES[lang]["quiz_start"].format(name=module["name"]))
+            await query.message.reply_text(MESSAGES[lang]["quiz_question"].format(num=1, q=module["quiz"][0]["q"]),
+                                           reply_markup=InlineKeyboardMarkup(keyboard))
+            context.user_data["quiz_step"] = 1
+            context.user_data["quiz_module"] = module_id
+        else:
+            await query.message.reply_text(MESSAGES[lang]["prereq_error"])
     elif "quiz:" in query.data:
         answer = query.data.split("quiz:")[1]
         step = context.user_data["quiz_step"]
@@ -492,10 +497,10 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
         module = next(m for m in TRAINING_MODULES if m["id"] == module_id)
         question = module["quiz"][step - 1]
         if answer == question["answer"]:
-            await query.message.reply_text(MESSAGES[lang]["quiz_correct"])
+            await query.message.reply_text(MESSAGES[lang]["quiz_correct"].format(explain=question["explain"]))
             context.user_data["quiz_score"] = context.user_data.get("quiz_score", 0) + 1
         else:
-            await query.message.reply_text(MESSAGES[lang]["quiz_wrong"].format(answer=question["answer"]))
+            await query.message.reply_text(MESSAGES[lang]["quiz_wrong"].format(answer=question["answer"], explain=question["explain"]))
         if step < len(module["quiz"]):
             context.user_data["quiz_step"] += 1
             next_q = module["quiz"][step]
@@ -508,6 +513,12 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await query.message.reply_text(MESSAGES[lang]["quiz_done"].format(score=score, total=len(module["quiz"])))
             del context.user_data["quiz_step"]
             del context.user_data["quiz_score"]
+            if len(context.user_data["completed_modules"]) == 2:  # Mid-training survey
+                await query.message.reply_text(MESSAGES[lang]["survey_satisfaction"])
+                context.user_data["survey_step"] = "mid"
+            elif len(context.user_data["completed_modules"]) == len(TRAINING_MODULES):  # End survey
+                await query.message.reply_text(MESSAGES[lang]["survey_satisfaction"])
+                context.user_data["survey_step"] = "end"
     elif "profile:" in query.data:
         field = query.data.split("profile:")[1]
         context.user_data["profile_step"] = field
@@ -535,7 +546,7 @@ def schedule_notifications(app):
 async def notify_training(app, name, date):
     for row in training_sheet.get_all_records():
         chat_id = row["ChatID"]
-        await app.bot.send_message(chat_id, f"Reminder: {name} training on {date} is in 7 days! Reply /trainings for details.")
+        await app.bot.send_message(chat_id, f"Reminder: {name} training on {date} is in 7 days! Reply /training_events for details.")
 
 # Set up the bot
 def main():
