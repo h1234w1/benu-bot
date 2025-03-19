@@ -128,20 +128,23 @@ async def show_options(update: Update, context: ContextTypes.DEFAULT_TYPE, lang)
 
 async def ask(update: Update, context: ContextTypes.DEFAULT_TYPE):
     lang = context.user_data.get("lang", "en")
-    await update.message.reply_text(MESSAGES[lang]["ask_prompt"])
+    query = update.callback_query
+    await query.message.reply_text(MESSAGES[lang]["ask_prompt"])
 
 async def resources(update: Update, context: ContextTypes.DEFAULT_TYPE):
     lang = context.user_data.get("lang", "en")
+    query = update.callback_query
     past_resources = "\n".join(
         f"- {t['name']} ({t['date']}): {t['resources'] or MESSAGES[lang]['no_resources']}"
         for t in PAST_TRAININGS if t.get("resources")
     )
-    await update.message.reply_text(
+    await query.message.reply_text(
         f"{MESSAGES[lang]['resources_title']}\n" + (past_resources or MESSAGES[lang]["no_resources"])
     )
 
 async def trainings(update: Update, context: ContextTypes.DEFAULT_TYPE):
     lang = context.user_data.get("lang", "en")
+    query = update.callback_query
     past_text = f"{MESSAGES[lang]['trainings_past']}\n" + "\n".join(
         f"- {t['name']} ({t['date']}): Video: {t['video'] or 'No video'}, Resources: {t['resources'] or 'No resources'}"
         for t in PAST_TRAININGS
@@ -150,7 +153,7 @@ async def trainings(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"- {t['name']} ({t['date']}) - Reply /signup to join"
         for t in UPCOMING_TRAININGS
     )
-    await update.message.reply_text(f"{past_text}\n\n{upcoming_text}")
+    await query.message.reply_text(f"{past_text}\n\n{upcoming_text}")
 
 async def signup(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.message.chat_id
@@ -160,6 +163,7 @@ async def signup(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def networking(update: Update, context: ContextTypes.DEFAULT_TYPE):
     lang = context.user_data.get("lang", "en")
+    query = update.callback_query
     network_companies = {
         "Biscuit Production": [
             {"name": "EthioBiscuit Co.", "description": "Produces fortified biscuits", "contact": "+251912345678"},
@@ -186,7 +190,7 @@ async def networking(update: Update, context: ContextTypes.DEFAULT_TYPE):
             for c in companies
         )
     text += "\n\nReply /register to join the network!"
-    await update.message.reply_text(text)
+    await query.message.reply_text(text)
 
 async def register(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.message.chat_id
@@ -196,7 +200,8 @@ async def register(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def news(update: Update, context: ContextTypes.DEFAULT_TYPE):
     lang = context.user_data.get("lang", "en")
-    await update.message.reply_text(
+    query = update.callback_query
+    await query.message.reply_text(
         f"{MESSAGES[lang]['news_title']}\n"
         "1. March 12, 2025: Benu secured ETB 2.9M from SWR Ethiopia.\n"
         "2. April 10, 2025: First training held—29 saleswomen trained! See /trainings.\n"
@@ -207,14 +212,16 @@ async def news(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def contact(update: Update, context: ContextTypes.DEFAULT_TYPE):
     lang = context.user_data.get("lang", "en")
-    await update.message.reply_text(MESSAGES[lang]["contact_info"])
+    query = update.callback_query
+    await query.message.reply_text(MESSAGES[lang]["contact_info"])
 
 async def subscribenews(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    chat_id = update.message.chat_id
+    chat_id = update.callback_query.message.chat_id
     lang = context.user_data.get("lang", "en")
+    query = update.callback_query
     if training_sheet.find(str(chat_id)) is None:
         training_sheet.append_row([str(chat_id), "", "", "", "", datetime.now().isoformat()])
-    await update.message.reply_text(MESSAGES[lang]["subscribed"])
+    await query.message.reply_text(MESSAGES[lang]["subscribed"])
 
 # Handle multi-step replies
 async def handle_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -291,6 +298,7 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
     lang = context.user_data.get("lang", "en")
+    print(f"Button clicked: {query.data}")  # Debug log
 
     if "lang:" in query.data:
         lang_choice = query.data.split("lang:")[1]
@@ -308,6 +316,8 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
         }
         if cmd in handlers:
             await handlers[cmd](update, context)
+        else:
+            await query.message.reply_text("Command not recognized.")
     elif "cat:" in query.data:
         cat = query.data.split("cat:")[1]
         if cat == "done":
