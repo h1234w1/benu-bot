@@ -1,12 +1,16 @@
 import os
 import json
 import requests
-from datetime import datetime, timedelta
+import logging  # Added for debugging
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandler, filters, CallbackQueryHandler
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
+
+# Set up logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 # Google Sheets setup
 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
@@ -26,10 +30,10 @@ scheduler.start()
 MANAGER_CHAT_ID = "499281665"
 
 # xAI API setup
-XAI_API_KEY = os.environ.get("XAI_API_KEY")  # Fetches from Render
-XAI_API_URL = "https://api.x.ai/v1/chat/completions"  # Standard endpoint
+XAI_API_KEY = os.environ.get("XAI_API_KEY")
+XAI_API_URL = "https://api.x.ai/v1/chat/completions"
 
-# Training data (unchanged)
+# Training data
 UPCOMING_TRAININGS = [
     {"name": "Biscuit Production Basics", "date": "2025-04-15", "resources": None},
     {"name": "Marketing for Startups", "date": "2025-04-20", "resources": None},
@@ -218,28 +222,34 @@ async def handle_ask(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if context.user_data.get("asking"):
         lang = context.user_data.get("lang", "en")
         question = update.message.text
+        logger.info(f"Processing question: {question}")
         try:
             headers = {
                 "Authorization": f"Bearer {XAI_API_KEY}",
                 "Content-Type": "application/json"
             }
             payload = {
-                "model": "grok-beta",  # Adjust if xAI updates models by March 2025
+                "model": "grok-beta",
                 "messages": [
                     {"role": "system", "content": "You are Grok, a helpful AI for startup founders."},
                     {"role": "user", "content": question}
                 ],
                 "temperature": 0.7
             }
+            logger.info(f"Sending to xAI: {json.dumps(payload)}")
             response = requests.post(XAI_API_URL, json=payload, headers=headers, timeout=5)
+            logger.info(f"Response status: {response.status_code}")
             response.raise_for_status()
             answer = response.json()["choices"][0]["message"]["content"]
+            logger.info(f"Answer received: {answer}")
             await update.message.reply_text(answer)
         except Exception as e:
-            print(f"xAI API error: {e}")
+            logger.error(f"xAI API error: {str(e)}")
             await update.message.reply_text(MESSAGES[lang]["ask_error"])
         finally:
             del context.user_data["asking"]
+    else:
+        logger.info("No asking flag set")
 
 async def resources(update: Update, context: ContextTypes.DEFAULT_TYPE):
     lang = context.user_data.get("lang", "en")
@@ -481,7 +491,7 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
     lang = context.user_data.get("lang", "en")
-    print(f"Button clicked: {query.data}")
+    logger.info(f"Button clicked: {query.data}")
 
     if "lang:" in query.data:
         lang_choice = query.data.split("lang:")[1]
@@ -587,7 +597,7 @@ def main():
         url_path="/",
         webhook_url=f"https://{os.environ['RENDER_EXTERNAL_HOSTNAME']}/"
     )
-    print("Bot is running on Render...")
+    logger.info("Bot is running on Render...")
 
 if __name__ == "__main__":
     main()
