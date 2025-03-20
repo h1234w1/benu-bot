@@ -1,6 +1,7 @@
 import os
 import json
 import requests
+from datetime import datetime, timedelta
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandler, filters, CallbackQueryHandler
 import gspread
@@ -25,10 +26,10 @@ scheduler.start()
 MANAGER_CHAT_ID = "499281665"
 
 # xAI API setup
-XAI_API_KEY = os.environ.get("XAI_API_KEY")
-XAI_API_URL = "https://api.x.ai/v1/chat/completions"
+XAI_API_KEY = os.environ.get("XAI_API_KEY")  # Fetches from Render
+XAI_API_URL = "https://api.x.ai/v1/chat/completions"  # Standard endpoint
 
-# Training data
+# Training data (unchanged)
 UPCOMING_TRAININGS = [
     {"name": "Biscuit Production Basics", "date": "2025-04-15", "resources": None},
     {"name": "Marketing for Startups", "date": "2025-04-20", "resources": None},
@@ -139,12 +140,12 @@ MESSAGES = {
         "subscribenews": "የዜና ዝመናዎች",
         "learn_startup_skills": "የስታርትአፕ ክህሎቶችን ይማሩ",
         "update_profile": "መገለጫ ያሻሽሉ",
-        "ask_prompt": "እባክዎ ጥያቄዎን ይፃፉ፣ እኔም መልስ እፈልግ�lዎታለሁ!",
+        "ask_prompt": "እባክዎ ጥያቄዎን ይፃፉ፣ እኔም መልስ እፈልግልዎታለሁ!",
         "ask_error": "ይቅርታ፣ አሁን መልስ ለመስጠት ችግር አለብኝ። ቆይተው ይሞክሩ!",
         "resources_title": "የሚገኙ ሥልጠና መሣሪያዎች:",
         "no_resources": "እስካሁን መሣሪያዎች የሉም።",
         "trainings_past": "ያለፉ ሥልጠና ዝግጅቶች:",
-        "trainings_upcoming": "መጪ ሥ�lጠና ዝግጅቶች:",
+        "trainings_upcoming": "መጪ ሥልጠና ዝግጅቶች:",
         "signup_prompt": "እባክዎ ሙሉ ስምዎን ያስፈልጋል:",
         "survey_company_size": "የኩባንያዎ መጠን ምንድን ነው? (ለምሳሌ፡ ትንሽ፣ መካከለኛ፣ ትልቅ):",
         "networking_title": "በምድብ መልክ ኔትወርክ (ቢስኩት እና ግብርና ዘርፍ):",
@@ -217,34 +218,28 @@ async def handle_ask(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if context.user_data.get("asking"):
         lang = context.user_data.get("lang", "en")
         question = update.message.text
-        print(f"Processing question: {question}")
         try:
             headers = {
                 "Authorization": f"Bearer {XAI_API_KEY}",
                 "Content-Type": "application/json"
             }
             payload = {
-                "model": "grok-beta",
+                "model": "grok-beta",  # Adjust if xAI updates models by March 2025
                 "messages": [
                     {"role": "system", "content": "You are Grok, a helpful AI for startup founders."},
                     {"role": "user", "content": question}
                 ],
                 "temperature": 0.7
             }
-            print(f"Sending to xAI: {payload}")
             response = requests.post(XAI_API_URL, json=payload, headers=headers, timeout=5)
-            print(f"Response status: {response.status_code}")
             response.raise_for_status()
             answer = response.json()["choices"][0]["message"]["content"]
-            print(f"Answer received: {answer}")
             await update.message.reply_text(answer)
         except Exception as e:
-            print(f"xAI API error: {str(e)}")
+            print(f"xAI API error: {e}")
             await update.message.reply_text(MESSAGES[lang]["ask_error"])
         finally:
             del context.user_data["asking"]
-    else:
-        print("No asking flag set")
 
 async def resources(update: Update, context: ContextTypes.DEFAULT_TYPE):
     lang = context.user_data.get("lang", "en")
