@@ -1,5 +1,6 @@
 import os
 import json
+import requests
 from datetime import datetime, timedelta
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandler, filters, CallbackQueryHandler
@@ -21,10 +22,14 @@ network_sheet = sheet.worksheet("NetworkingRegistrations")
 scheduler = AsyncIOScheduler()
 scheduler.start()
 
-# Manager’s Telegram ID (your ID: 499281665)
+# Manager’s Telegram ID
 MANAGER_CHAT_ID = "499281665"
 
-# Training data
+# xAI API setup
+XAI_API_KEY = os.environ.get("XAI_API_KEY")  # Fetches from Render
+XAI_API_URL = "https://api.x.ai/v1/chat/completions"  # Standard endpoint
+
+# Training data (unchanged)
 UPCOMING_TRAININGS = [
     {"name": "Biscuit Production Basics", "date": "2025-04-15", "resources": None},
     {"name": "Marketing for Startups", "date": "2025-04-20", "resources": None},
@@ -83,7 +88,8 @@ MESSAGES = {
         "subscribenews": "News updates",
         "learn_startup_skills": "Learn Startup Skills",
         "update_profile": "Update Profile",
-        "ask_prompt": "Please type your question, and I’ll do my best to assist you!",
+        "ask_prompt": "Please type your question, and I’ll get an answer for you!",
+        "ask_error": "Sorry, I’m having trouble answering right now. Try again later!",
         "resources_title": "Available Training Resources:",
         "no_resources": "No resources available yet.",
         "trainings_past": "Past Training Events:",
@@ -134,7 +140,8 @@ MESSAGES = {
         "subscribenews": "የዜና ዝመናዎች",
         "learn_startup_skills": "የስታርትአፕ ክህሎቶችን ይማሩ",
         "update_profile": "መገለጫ ያሻሽሉ",
-        "ask_prompt": "እባክዎ ጥያቄዎን ይፃፉ፣ እኔም መልካም መልስ ለመስጠት እሞክራለሁ!",
+        "ask_prompt": "እባክዎ ጥያቄዎን ይፃፉ፣ እኔም መልስ እፈልግልዎታለሁ!",
+        "ask_error": "ይቅርታ፣ አሁን መልስ ለመስጠት ችግር አለብኝ። ቆይተው ይሞክሩ!",
         "resources_title": "የሚገኙ ሥልጠና መሣሪያዎች:",
         "no_resources": "እስካሁን መሣሪያዎች የሉም።",
         "trainings_past": "ያለፉ ሥልጠና ዝግጅቶች:",
@@ -205,6 +212,34 @@ async def ask(update: Update, context: ContextTypes.DEFAULT_TYPE):
     lang = context.user_data.get("lang", "en")
     query = update.callback_query
     await query.message.reply_text(MESSAGES[lang]["ask_prompt"])
+    context.user_data["asking"] = True
+
+async def handle_ask(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if context.user_data.get("asking"):
+        lang = context.user_data.get("lang", "en")
+        question = update.message.text
+        try:
+            headers = {
+                "Authorization": f"Bearer {XAI_API_KEY}",
+                "Content-Type": "application/json"
+            }
+            payload = {
+                "model": "grok-beta",  # Adjust if xAI updates models by March 2025
+                "messages": [
+                    {"role": "system", "content": "You are Grok, a helpful AI for startup founders."},
+                    {"role": "user", "content": question}
+                ],
+                "temperature": 0.7
+            }
+            response = requests.post(XAI_API_URL, json=payload, headers=headers, timeout=5)
+            response.raise_for_status()
+            answer = response.json()["choices"][0]["message"]["content"]
+            await update.message.reply_text(answer)
+        except Exception as e:
+            print(f"xAI API error: {e}")
+            await update.message.reply_text(MESSAGES[lang]["ask_error"])
+        finally:
+            del context.user_data["asking"]
 
 async def resources(update: Update, context: ContextTypes.DEFAULT_TYPE):
     lang = context.user_data.get("lang", "en")
@@ -249,7 +284,6 @@ async def networking(update: Update, context: ContextTypes.DEFAULT_TYPE):
             {"name": "FarmTech Ltd.", "description": "Organic farming solutions", "contact": "Private"}
         ]
     }
-    
     network_data = network_sheet.get_all_records()
     for entry in network_data:
         for cat in entry["Categories"].split(","):
@@ -257,7 +291,6 @@ async def networking(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 network_companies[cat] = []
             network_companies[cat].append({"name": entry["Company"], "description": entry["Description"],
                                            "contact": entry["Phone"] if entry["PublicEmail"] == "Yes" else "Private"})
-
     text = f"{MESSAGES[lang]['networking_title']}\n"
     for cat, companies in network_companies.items():
         text += f"\n{cat}:\n" + "\n".join(
@@ -318,14 +351,14 @@ async def update_profile(update: Update, context: ContextTypes.DEFAULT_TYPE):
     ]
     await query.message.reply_text(MESSAGES[lang]["profile_prompt"], reply_markup=InlineKeyboardMarkup(keyboard))
 
-# Handle multi-step replies
 async def handle_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.message.chat_id
     text = update.message.text
     lang = context.user_data.get("lang", "en")
 
-    # Training signup flow with survey
-    if "signup_step" in context.user_data:
+    if "asking" in context.user_data:
+        await handle_ask(update, context)
+    elif "signup_step" in context.user_data:
         step = context.user_data["signup_step"]
         if step == "name":
             context.user_data["name"] = text
@@ -351,8 +384,6 @@ async def handle_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await context.bot.send_message(MANAGER_CHAT_ID, f"New Signup: {data[1:]}")
             await update.message.reply_text(MESSAGES[lang]["signup_thanks"].format(name=data[1]))
             del context.user_data["signup_step"]
-
-    # Networking registration flow
     elif "register_step" in context.user_data:
         step = context.user_data["register_step"]
         if step == "company":
@@ -392,8 +423,6 @@ async def handle_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await context.bot.send_message(MANAGER_CHAT_ID, f"New Network Reg: {data[1:]}")
             await update.message.reply_text(MESSAGES[lang]["register_thanks"].format(company=data[1]))
             del context.user_data["register_step"]
-
-    # Quiz answers
     elif "quiz_step" in context.user_data:
         step = context.user_data["quiz_step"]
         module_id = context.user_data["quiz_module"]
@@ -416,14 +445,12 @@ async def handle_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text(MESSAGES[lang]["quiz_done"].format(score=score, total=len(module["quiz"])))
             del context.user_data["quiz_step"]
             del context.user_data["quiz_score"]
-            if len(context.user_data["completed_modules"]) == 2:  # Mid-training survey
+            if len(context.user_data["completed_modules"]) == 2:
                 await update.message.reply_text(MESSAGES[lang]["survey_satisfaction"])
                 context.user_data["survey_step"] = "mid"
-            elif len(context.user_data["completed_modules"]) == len(TRAINING_MODULES):  # End survey
+            elif len(context.user_data["completed_modules"]) == len(TRAINING_MODULES):
                 await update.message.reply_text(MESSAGES[lang]["survey_satisfaction"])
                 context.user_data["survey_step"] = "end"
-
-    # Profile updates
     elif "profile_step" in context.user_data:
         step = context.user_data["profile_step"]
         cell = training_sheet.find(str(chat_id))
@@ -439,8 +466,6 @@ async def handle_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 training_sheet.update_cell(row, 5, text)
             await update.message.reply_text(MESSAGES[lang]["profile_updated"])
             del context.user_data["profile_step"]
-
-    # Satisfactory survey
     elif "survey_step" in context.user_data:
         try:
             rating = int(text)
@@ -513,10 +538,10 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await query.message.reply_text(MESSAGES[lang]["quiz_done"].format(score=score, total=len(module["quiz"])))
             del context.user_data["quiz_step"]
             del context.user_data["quiz_score"]
-            if len(context.user_data["completed_modules"]) == 2:  # Mid-training survey
+            if len(context.user_data["completed_modules"]) == 2:
                 await query.message.reply_text(MESSAGES[lang]["survey_satisfaction"])
                 context.user_data["survey_step"] = "mid"
-            elif len(context.user_data["completed_modules"]) == len(TRAINING_MODULES):  # End survey
+            elif len(context.user_data["completed_modules"]) == len(TRAINING_MODULES):
                 await query.message.reply_text(MESSAGES[lang]["survey_satisfaction"])
                 context.user_data["survey_step"] = "end"
     elif "profile:" in query.data:
@@ -532,7 +557,6 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
             context.user_data.setdefault("categories", []).append(cat)
             await query.edit_message_text(MESSAGES[lang]["cat_added"].format(cat=cat))
 
-# Schedule notifications
 def schedule_notifications(app):
     for training in UPCOMING_TRAININGS:
         date = datetime.strptime(training["date"], "%Y-%m-%d")
@@ -548,21 +572,14 @@ async def notify_training(app, name, date):
         chat_id = row["ChatID"]
         await app.bot.send_message(chat_id, f"Reminder: {name} training on {date} is in 7 days! Reply /training_events for details.")
 
-# Set up the bot
 def main():
     app = Application.builder().token("7910442120:AAFMUhnwTONoyF1xilwRpjWIRCTmGa0den4").build()
-    
-    # Add handlers
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("signup", signup))
     app.add_handler(CommandHandler("register", register))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_reply))
     app.add_handler(CallbackQueryHandler(button))
-    
-    # Schedule notifications
     schedule_notifications(app)
-    
-    # Run with webhook
     port = int(os.environ.get("PORT", 8443))
     app.run_webhook(
         listen="0.0.0.0",
