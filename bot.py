@@ -1,16 +1,11 @@
 import os
 import json
 import requests
-import logging  # Added for debugging
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandler, filters, CallbackQueryHandler
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
-
-# Set up logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-logger = logging.getLogger(__name__)
 
 # Google Sheets setup
 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
@@ -144,12 +139,12 @@ MESSAGES = {
         "subscribenews": "የዜና ዝመናዎች",
         "learn_startup_skills": "የስታርትአፕ ክህሎቶችን ይማሩ",
         "update_profile": "መገለጫ ያሻሽሉ",
-        "ask_prompt": "እባክዎ ጥያቄዎን ይፃፉ፣ እኔም መልስ እፈልግልዎታለሁ!",
+        "ask_prompt": "እባክዎ ጥያቄዎን ይፃፉ፣ እኔም መልስ እፈልግ�lዎታለሁ!",
         "ask_error": "ይቅርታ፣ አሁን መልስ ለመስጠት ችግር አለብኝ። ቆይተው ይሞክሩ!",
         "resources_title": "የሚገኙ ሥልጠና መሣሪያዎች:",
         "no_resources": "እስካሁን መሣሪያዎች የሉም።",
         "trainings_past": "ያለፉ ሥልጠና ዝግጅቶች:",
-        "trainings_upcoming": "መጪ ሥልጠና ዝግጅቶች:",
+        "trainings_upcoming": "መጪ ሥ�lጠና ዝግጅቶች:",
         "signup_prompt": "እባክዎ ሙሉ ስምዎን ያስፈልጋል:",
         "survey_company_size": "የኩባንያዎ መጠን ምንድን ነው? (ለምሳሌ፡ ትንሽ፣ መካከለኛ፣ ትልቅ):",
         "networking_title": "በምድብ መልክ ኔትወርክ (ቢስኩት እና ግብርና ዘርፍ):",
@@ -222,7 +217,7 @@ async def handle_ask(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if context.user_data.get("asking"):
         lang = context.user_data.get("lang", "en")
         question = update.message.text
-        logger.info(f"Processing question: {question}")
+        print(f"Processing question: {question}")
         try:
             headers = {
                 "Authorization": f"Bearer {XAI_API_KEY}",
@@ -236,20 +231,20 @@ async def handle_ask(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 ],
                 "temperature": 0.7
             }
-            logger.info(f"Sending to xAI: {json.dumps(payload)}")
+            print(f"Sending to xAI: {payload}")
             response = requests.post(XAI_API_URL, json=payload, headers=headers, timeout=5)
-            logger.info(f"Response status: {response.status_code}")
+            print(f"Response status: {response.status_code}")
             response.raise_for_status()
             answer = response.json()["choices"][0]["message"]["content"]
-            logger.info(f"Answer received: {answer}")
+            print(f"Answer received: {answer}")
             await update.message.reply_text(answer)
         except Exception as e:
-            logger.error(f"xAI API error: {str(e)}")
+            print(f"xAI API error: {str(e)}")
             await update.message.reply_text(MESSAGES[lang]["ask_error"])
         finally:
             del context.user_data["asking"]
     else:
-        logger.info("No asking flag set")
+        print("No asking flag set")
 
 async def resources(update: Update, context: ContextTypes.DEFAULT_TYPE):
     lang = context.user_data.get("lang", "en")
@@ -491,7 +486,7 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
     lang = context.user_data.get("lang", "en")
-    logger.info(f"Button clicked: {query.data}")
+    print(f"Button clicked: {query.data}")
 
     if "lang:" in query.data:
         lang_choice = query.data.split("lang:")[1]
@@ -597,7 +592,7 @@ def main():
         url_path="/",
         webhook_url=f"https://{os.environ['RENDER_EXTERNAL_HOSTNAME']}/"
     )
-    logger.info("Bot is running on Render...")
+    print("Bot is running on Render...")
 
 if __name__ == "__main__":
     main()
