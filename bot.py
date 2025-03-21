@@ -9,6 +9,9 @@ from oauth2client.service_account import ServiceAccountCredentials
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 import telegram.error
 from flask import Flask, request, Response
+import asyncio
+from hypercorn.config import Config
+from hypercorn.asyncio import serve
 
 # Google Sheets setup
 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
@@ -609,11 +612,12 @@ async def main():
     schedule_notifications(application)
     # Start the scheduler
     scheduler.start()
-    # Start Flask
-    port = int(os.environ.get("PORT", 10000))  # Render defaults to 10000
-    flask_app.run(host="0.0.0.0", port=port)
-    print("Bot is running on Render...")
+    # Configure Hypercorn
+    config = Config()
+    config.bind = ["0.0.0.0:10000"]  # Render defaults to 10000
+    # Start the server
+    await serve(flask_app, config)
+    print("Bot is running on Render with Hypercorn...")
 
 if __name__ == "__main__":
-    import asyncio
     asyncio.run(main())
