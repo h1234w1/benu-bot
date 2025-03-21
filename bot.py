@@ -27,7 +27,7 @@ MANAGER_CHAT_ID = "499281665"
 
 # Hugging Face API setup
 HF_API_KEY = os.environ.get("HF_API_KEY")
-HF_API_URL = "https://api-inference.huggingface.co/models/mixtral-8x7b-instruct-v0.1"
+HF_API_URL = "https://api-inference.huggingface.co/models/mixtralai/Mixtral-8x7B-Instruct-v0.1"
 
 # Training data
 UPCOMING_TRAININGS = [
