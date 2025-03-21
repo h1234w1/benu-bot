@@ -25,9 +25,9 @@ scheduler.start()
 # Manager’s Telegram ID
 MANAGER_CHAT_ID = "499281665"
 
-# xAI API setup
-XAI_API_KEY = os.environ.get("XAI_API_KEY")  # Fetches from Render
-XAI_API_URL = "https://api.x.ai/v1/chat/completions"  # Standard endpoint
+# Hugging Face API setup
+HF_API_KEY = os.environ.get("HF_API_KEY")
+HF_API_URL = "https://api-inference.huggingface.co/models/mixtral-8x7b-instruct-v0.1"
 
 # Training data (unchanged)
 UPCOMING_TRAININGS = [
@@ -429,7 +429,7 @@ async def handle_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
         module = next(m for m in TRAINING_MODULES if m["id"] == module_id)
         question = module["quiz"][step - 1]
         if text.lower() == question["answer"].lower():
-            await update.message.reply_text(MESSAGES[lang]["quiz_correct"].format(explain=question["explain"]))
+            await update.message.reply_text(MMessages[lang]["quiz_correct"].format(explain=question["explain"]))
             context.user_data["quiz_score"] = context.user_data.get("quiz_score", 0) + 1
         else:
             await update.message.reply_text(MESSAGES[lang]["quiz_wrong"].format(answer=question["answer"], explain=question["explain"]))
