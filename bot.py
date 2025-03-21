@@ -7,6 +7,7 @@ from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandl
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
+import telegram.error
 
 # Google Sheets setup
 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
@@ -211,7 +212,7 @@ async def show_options(update: Update, context: ContextTypes.DEFAULT_TYPE, lang)
 async def ask(update: Update, context: ContextTypes.DEFAULT_TYPE):
     lang = context.user_data.get("lang", "en")
     query = update.callback_query
-    await query.message.reply_text(MESSAGES[lang]["ask_prompt"])
+    await query.edit_message_text(MESSAGES[lang]["ask_prompt"] + "\n\nProcessing your request...")
     context.user_data["asking"] = True
 
 async def handle_ask(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -227,7 +228,7 @@ async def handle_ask(update: Update, context: ContextTypes.DEFAULT_TYPE):
             payload = {
                 "inputs": f"You are a helpful AI for startup founders. {question}",
                 "parameters": {
-                    "max_new_tokens": 200,
+                    "max_new_tokens": 200,  # Reduced for speed
                     "temperature": 0.7,
                     "return_full_text": False
                 }
@@ -483,83 +484,87 @@ async def handle_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
-    await query.answer()
+    await query.answer()  # Acknowledge immediately to avoid timeout
     lang = context.user_data.get("lang", "en")
     print(f"Button clicked: {query.data}")
 
-    if "lang:" in query.data:
-        lang_choice = query.data.split("lang:")[1]
-        await show_options(update, context, lang_choice)
-    elif "cmd:" in query.data:
-        cmd = query.data.split("cmd:")[1]
-        handlers = {
-            "ask": ask,
-            "resources": resources,
-            "training_events": training_events,
-            "networking": networking,
-            "news": news,
-            "contact": contact,
-            "subscribenews": subscribenews,
-            "learn_startup_skills": learn_startup_skills,
-            "update_profile": update_profile
-        }
-        if cmd in handlers:
-            await handlers[cmd](update, context)
-    elif "module:" in query.data:
-        module_id = int(query.data.split("module:")[1])
-        module = next(m for m in TRAINING_MODULES if m["id"] == module_id)
-        completed = context.user_data.get("completed_modules", [])
-        if all(prereq in completed for prereq in module["prereq"]):
-            await query.message.reply_text(MESSAGES[lang]["module_study"].format(name=module["name"], content=module["content"]))
-            keyboard = [[InlineKeyboardButton(opt, callback_data=f"quiz:{opt}")] for opt in module["quiz"][0]["options"]]
-            await query.message.reply_text(MESSAGES[lang]["quiz_start"].format(name=module["name"]))
-            await query.message.reply_text(MESSAGES[lang]["quiz_question"].format(num=1, q=module["quiz"][0]["q"]),
-                                           reply_markup=InlineKeyboardMarkup(keyboard))
-            context.user_data["quiz_step"] = 1
-            context.user_data["quiz_module"] = module_id
-        else:
-            await query.message.reply_text(MESSAGES[lang]["prereq_error"])
-    elif "quiz:" in query.data:
-        answer = query.data.split("quiz:")[1]
-        step = context.user_data["quiz_step"]
-        module_id = context.user_data["quiz_module"]
-        module = next(m for m in TRAINING_MODULES if m["id"] == module_id)
-        question = module["quiz"][step - 1]
-        if answer == question["answer"]:
-            await query.message.reply_text(MESSAGES[lang]["quiz_correct"].format(explain=question["explain"]))
-            context.user_data["quiz_score"] = context.user_data.get("quiz_score", 0) + 1
-        else:
-            await query.message.reply_text(MESSAGES[lang]["quiz_wrong"].format(answer=question["answer"], explain=question["explain"]))
-        if step < len(module["quiz"]):
-            context.user_data["quiz_step"] += 1
-            next_q = module["quiz"][step]
-            keyboard = [[InlineKeyboardButton(opt, callback_data=f"quiz:{opt}")] for opt in next_q["options"]]
-            await query.message.reply_text(MESSAGES[lang]["quiz_question"].format(num=step + 1, q=next_q["q"]),
-                                           reply_markup=InlineKeyboardMarkup(keyboard))
-        else:
-            score = context.user_data.get("quiz_score", 0)
-            context.user_data["completed_modules"] = context.user_data.get("completed_modules", []) + [module_id]
-            await query.message.reply_text(MESSAGES[lang]["quiz_done"].format(score=score, total=len(module["quiz"])))
-            del context.user_data["quiz_step"]
-            del context.user_data["quiz_score"]
-            if len(context.user_data["completed_modules"]) == 2:
-                await query.message.reply_text(MESSAGES[lang]["survey_satisfaction"])
-                context.user_data["survey_step"] = "mid"
-            elif len(context.user_data["completed_modules"]) == len(TRAINING_MODULES):
-                await query.message.reply_text(MESSAGES[lang]["survey_satisfaction"])
-                context.user_data["survey_step"] = "end"
-    elif "profile:" in query.data:
-        field = query.data.split("profile:")[1]
-        context.user_data["profile_step"] = field
-        await query.message.reply_text(MESSAGES[lang][f"profile_{field}"])
-    elif "cat:" in query.data:
-        cat = query.data.split("cat:")[1]
-        if cat == "done":
-            context.user_data["register_step"] = "public"
-            await query.edit_message_text(MESSAGES[lang]["public_prompt"])
-        else:
-            context.user_data.setdefault("categories", []).append(cat)
-            await query.edit_message_text(MESSAGES[lang]["cat_added"].format(cat=cat))
+    try:
+        if "lang:" in query.data:
+            lang_choice = query.data.split("lang:")[1]
+            await show_options(update, context, lang_choice)
+        elif "cmd:" in query.data:
+            cmd = query.data.split("cmd:")[1]
+            handlers = {
+                "ask": ask,
+                "resources": resources,
+                "training_events": training_events,
+                "networking": networking,
+                "news": news,
+                "contact": contact,
+                "subscribenews": subscribenews,
+                "learn_startup_skills": learn_startup_skills,
+                "update_profile": update_profile
+            }
+            if cmd in handlers:
+                await handlers[cmd](update, context)
+        elif "module:" in query.data:
+            module_id = int(query.data.split("module:")[1])
+            module = next(m for m in TRAINING_MODULES if m["id"] == module_id)
+            completed = context.user_data.get("completed_modules", [])
+            if all(prereq in completed for prereq in module["prereq"]):
+                await query.message.reply_text(MESSAGES[lang]["module_study"].format(name=module["name"], content=module["content"]))
+                keyboard = [[InlineKeyboardButton(opt, callback_data=f"quiz:{opt}")] for opt in module["quiz"][0]["options"]]
+                await query.message.reply_text(MESSAGES[lang]["quiz_start"].format(name=module["name"]))
+                await query.message.reply_text(MESSAGES[lang]["quiz_question"].format(num=1, q=module["quiz"][0]["q"]),
+                                               reply_markup=InlineKeyboardMarkup(keyboard))
+                context.user_data["quiz_step"] = 1
+                context.user_data["quiz_module"] = module_id
+            else:
+                await query.message.reply_text(MESSAGES[lang]["prereq_error"])
+        elif "quiz:" in query.data:
+            answer = query.data.split("quiz:")[1]
+            step = context.user_data["quiz_step"]
+            module_id = context.user_data["quiz_module"]
+            module = next(m for m in TRAINING_MODULES if m["id"] == module_id)
+            question = module["quiz"][step - 1]
+            if answer == question["answer"]:
+                await query.message.reply_text(MESSAGES[lang]["quiz_correct"].format(explain=question["explain"]))
+                context.user_data["quiz_score"] = context.user_data.get("quiz_score", 0) + 1
+            else:
+                await query.message.reply_text(MESSAGES[lang]["quiz_wrong"].format(answer=question["answer"], explain=question["explain"]))
+            if step < len(module["quiz"]):
+                context.user_data["quiz_step"] += 1
+                next_q = module["quiz"][step]
+                keyboard = [[InlineKeyboardButton(opt, callback_data=f"quiz:{opt}")] for opt in next_q["options"]]
+                await query.message.reply_text(MESSAGES[lang]["quiz_question"].format(num=step + 1, q=next_q["q"]),
+                                               reply_markup=InlineKeyboardMarkup(keyboard))
+            else:
+                score = context.user_data.get("quiz_score", 0)
+                context.user_data["completed_modules"] = context.user_data.get("completed_modules", []) + [module_id]
+                await query.message.reply_text(MESSAGES[lang]["quiz_done"].format(score=score, total=len(module["quiz"])))
+                del context.user_data["quiz_step"]
+                del context.user_data["quiz_score"]
+                if len(context.user_data["completed_modules"]) == 2:
+                    await query.message.reply_text(MESSAGES[lang]["survey_satisfaction"])
+                    context.user_data["survey_step"] = "mid"
+                elif len(context.user_data["completed_modules"]) == len(TRAINING_MODULES):
+                    await query.message.reply_text(MESSAGES[lang]["survey_satisfaction"])
+                    context.user_data["survey_step"] = "end"
+        elif "profile:" in query.data:
+            field = query.data.split("profile:")[1]
+            context.user_data["profile_step"] = field
+            await query.message.reply_text(MESSAGES[lang][f"profile_{field}"])
+        elif "cat:" in query.data:
+            cat = query.data.split("cat:")[1]
+            if cat == "done":
+                context.user_data["register_step"] = "public"
+                await query.edit_message_text(MESSAGES[lang]["public_prompt"])
+            else:
+                context.user_data.setdefault("categories", []).append(cat)
+                await query.edit_message_text(MESSAGES[lang]["cat_added"].format(cat=cat))
+    except telegram.error.BadRequest as e:
+        print(f"Query error: {str(e)}")
+        await query.message.reply_text("Sorry, that button timed out. Please try again!")
 
 def schedule_notifications(app):
     for training in UPCOMING_TRAININGS:
