@@ -606,18 +606,39 @@ def ping():
     return Response(status=200)
 
 async def main():
+    loop = asyncio.get_event_loop()
+    
     # Initialize the application
     await application.initialize()
+    
     # Schedule notifications
     schedule_notifications(application)
-    # Start the scheduler
+    
+    # Start the scheduler with the same event loop
     scheduler.start()
+    
     # Configure Hypercorn
     config = Config()
     config.bind = ["0.0.0.0:10000"]  # Render defaults to 10000
-    # Start the server
-    await serve(flask_app, config)
-    print("Bot is running on Render with Hypercorn...")
+    
+    # Run the server until interrupted
+    try:
+        await serve(flask_app, config)
+    except asyncio.CancelledError:
+        print("Shutting down gracefully...")
+    finally:
+        # Cleanup on shutdown
+        scheduler.shutdown()
+        await application.stop()
+        print("Bot has stopped.")
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    loop = asyncio.get_event_loop()
+    try:
+        loop.run_until_complete(main())
+    except KeyboardInterrupt:
+        print("Received shutdown signal.")
+        loop.run_until_complete(asyncio.gather(*asyncio.all_tasks(loop)))
+    finally:
+        loop.close()
+        print("Event loop closed.")
