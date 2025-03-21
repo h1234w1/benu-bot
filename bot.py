@@ -8,7 +8,7 @@ import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 import telegram.error
-from flask import Flask, Response
+from flask import Flask, request, Response
 
 # Google Sheets setup
 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
@@ -229,7 +229,7 @@ async def handle_ask(update: Update, context: ContextTypes.DEFAULT_TYPE):
             payload = {
                 "inputs": f"You are a helpful AI for startup founders. {question}",
                 "parameters": {
-                    "max_new_tokens": 200,
+                    "max_new_tokens": 100,
                     "temperature": 0.7,
                     "return_full_text": False
                 }
@@ -582,28 +582,31 @@ async def notify_training(app, name, date):
         chat_id = row["ChatID"]
         await app.bot.send_message(chat_id, f"Reminder: {name} training on {date} is in 7 days! Reply /training_events for details.")
 
+# Flask app setup
+flask_app = Flask(__name__)
+application = Application.builder().token("7910442120:AAFMUhnwTONoyF1xilwRpjWIRCTmGa0den4").build()
+
+# Add handlers to the Telegram application
+application.add_handler(CommandHandler("start", start))
+application.add_handler(CommandHandler("signup", signup))
+application.add_handler(CommandHandler("register", register))
+application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_reply))
+application.add_handler(CallbackQueryHandler(button))
+
+@flask_app.route('/', methods=['POST'])
+def webhook():
+    update = Update.de_json(request.get_json(force=True), application.bot)
+    application.process_update(update)
+    return '', 200
+
+@flask_app.route('/ping', methods=['HEAD'])
+def ping():
+    return Response(status=200)
+
 def main():
-    flask_app = Flask(__name__)
-
-    @flask_app.route('/ping', methods=['HEAD'])
-    def ping():
-        return Response(status=200)  # Return 200 OK for HEAD requests
-
-    app = Application.builder().token("7910442120:AAFMUhnwTONoyF1xilwRpjWIRCTmGa0den4").build()
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("signup", signup))
-    app.add_handler(CommandHandler("register", register))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_reply))
-    app.add_handler(CallbackQueryHandler(button))
-    schedule_notifications(app)
+    schedule_notifications(application)
     port = int(os.environ.get("PORT", 8443))
-    app.run_webhook(
-        listen="0.0.0.0",
-        port=port,
-        url_path="/",
-        webhook_url=f"https://{os.environ['RENDER_EXTERNAL_HOSTNAME']}/",
-        bootstrap_app=flask_app
-    )
+    flask_app.run(host="0.0.0.0", port=port)
     print("Bot is running on Render...")
 
 if __name__ == "__main__":
