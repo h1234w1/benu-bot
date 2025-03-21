@@ -594,9 +594,9 @@ application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_r
 application.add_handler(CallbackQueryHandler(button))
 
 @flask_app.route('/', methods=['POST'])
-def webhook():
+async def webhook():
     update = Update.de_json(request.get_json(force=True), application.bot)
-    application.process_update(update)
+    await application.process_update(update)
     return '', 200
 
 @flask_app.route('/ping', methods=['HEAD'])
