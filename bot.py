@@ -29,7 +29,7 @@ MANAGER_CHAT_ID = "499281665"
 HF_API_KEY = os.environ.get("HF_API_KEY")
 HF_API_URL = "https://api-inference.huggingface.co/models/mixtral-8x7b-instruct-v0.1"
 
-# Training data (unchanged)
+# Training data
 UPCOMING_TRAININGS = [
     {"name": "Biscuit Production Basics", "date": "2025-04-15", "resources": None},
     {"name": "Marketing for Startups", "date": "2025-04-20", "resources": None},
@@ -218,25 +218,29 @@ async def handle_ask(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if context.user_data.get("asking"):
         lang = context.user_data.get("lang", "en")
         question = update.message.text
+        print(f"Processing question: {question}")
         try:
             headers = {
-                "Authorization": f"Bearer {XAI_API_KEY}",
+                "Authorization": f"Bearer {HF_API_KEY}",
                 "Content-Type": "application/json"
             }
             payload = {
-                "model": "grok-beta",  # Adjust if xAI updates models by March 2025
-                "messages": [
-                    {"role": "system", "content": "You are Grok, a helpful AI for startup founders."},
-                    {"role": "user", "content": question}
-                ],
-                "temperature": 0.7
+                "inputs": f"You are a helpful AI for startup founders. {question}",
+                "parameters": {
+                    "max_new_tokens": 200,
+                    "temperature": 0.7,
+                    "return_full_text": False
+                }
             }
-            response = requests.post(XAI_API_URL, json=payload, headers=headers, timeout=5)
+            print(f"Sending to HF: {json.dumps(payload)}")
+            response = requests.post(HF_API_URL, json=payload, headers=headers, timeout=10)
+            print(f"Response status: {response.status_code}")
+            print(f"Response body: {response.text}")
             response.raise_for_status()
-            answer = response.json()["choices"][0]["message"]["content"]
+            answer = response.json()[0]["generated_text"].strip()
             await update.message.reply_text(answer)
         except Exception as e:
-            print(f"xAI API error: {e}")
+            print(f"HF API error: {str(e)}")
             await update.message.reply_text(MESSAGES[lang]["ask_error"])
         finally:
             del context.user_data["asking"]
@@ -429,7 +433,7 @@ async def handle_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
         module = next(m for m in TRAINING_MODULES if m["id"] == module_id)
         question = module["quiz"][step - 1]
         if text.lower() == question["answer"].lower():
-            await update.message.reply_text(MMessages[lang]["quiz_correct"].format(explain=question["explain"]))
+            await update.message.reply_text(MESSAGES[lang]["quiz_correct"].format(explain=question["explain"]))
             context.user_data["quiz_score"] = context.user_data.get("quiz_score", 0) + 1
         else:
             await update.message.reply_text(MESSAGES[lang]["quiz_wrong"].format(answer=question["answer"], explain=question["explain"]))
