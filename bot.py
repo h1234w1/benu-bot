@@ -22,7 +22,6 @@ network_sheet = sheet.worksheet("NetworkingRegistrations")
 
 # Scheduler for notifications
 scheduler = AsyncIOScheduler()
-scheduler.start()
 
 # Manager’s Telegram ID
 MANAGER_CHAT_ID = "499281665"
@@ -603,11 +602,18 @@ async def webhook():
 def ping():
     return Response(status=200)
 
-def main():
+async def main():
+    # Initialize the application
+    await application.initialize()
+    # Schedule notifications
     schedule_notifications(application)
-    port = int(os.environ.get("PORT", 8443))
+    # Start the scheduler
+    scheduler.start()
+    # Start Flask
+    port = int(os.environ.get("PORT", 10000))  # Render defaults to 10000
     flask_app.run(host="0.0.0.0", port=port)
     print("Bot is running on Render...")
 
 if __name__ == "__main__":
-    main()
+    import asyncio
+    asyncio.run(main())
