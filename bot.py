@@ -156,10 +156,10 @@ MESSAGES = {
         "update_profile": "መገለጫ ያሻሽሉ",
         "ask_prompt": "እባክዎ ጥያቄዎን ይፃፉ፣ እኔም መልስ እፈልግልዎታለሁ!",
         "ask_error": "ይቅርታ፣ አሁን መልስ ለመስጠት ችግር አለብኝ። ቆይተው ይሞክሩ!",
-        "resources_title": "የሚገኙ ሥልጠና መሣሪያዎች:",
+        "resources_title": "የሚገኙ ሥልጠና መሣሪዪዎች:",
         "no_resources": "እስካሁን መሣሪያዎች የሉም።",
         "trainings_past": "ያለፉ ሥልጠና ዝግጅቶች:",
-        "trainings_upcoming": "መጪ ሥልጠና ዝግጅቶች:",
+        "trainings_upcoming": "መጪ ሥ�lጠና ዝግጅቶች:",
         "signup_prompt": "እባክዎ ሙሉ ስምዎን ያስፈልጋል:",
         "survey_company_size": "የኩባንያዎ መጠን ምንድን ነው? (ለምሳሌ፡ ትንሽ፣ መካከለኛ፣ ትልቅ):",
         "networking_title": "በምድብ መልክ ኔትወርክ (ቢስኩት እና ግብርና ዘርፍ):",
@@ -191,7 +191,7 @@ MESSAGES = {
         "profile_email": "አዲስ ኢሜል:",
         "profile_company": "አዲስ ኩባንያ:",
         "profile_updated": "መገለጫ ተሻሽሏል!",
-        "survey_satisfaction": "ሥ�lጠናው ምን ያህል እንደሚያረካዎት? (1-5):",
+        "survey_satisfaction": "ሥልጠናው ምን ያህል እንደሚያረካዎት? (1-5):",
         "survey_thanks": "ለአስተያየትዎ እናመሰግናለን!"
     }
 }
@@ -273,7 +273,7 @@ async def handle_ask(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
             keyboard = [
                 [InlineKeyboardButton("Ask Another Question", callback_data="cmd:ask_again"),
-                 InlineKeyboardButton("Back to Main Menu", callback_data="cmd:main_menu")]
+                 InlineKeyboardButton("🔙 Back to Main Menu", callback_data="cmd:main_menu")]
             ]
             reply_markup = InlineKeyboardMarkup(keyboard)
             await update.message.reply_text(formatted_answer, parse_mode="Markdown", reply_markup=reply_markup)
@@ -286,7 +286,7 @@ async def handle_ask(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
             keyboard = [
                 [InlineKeyboardButton("Try Again", callback_data="cmd:ask_again"),
-                 InlineKeyboardButton("Back to Main Menu", callback_data="cmd:main_menu")]
+                 InlineKeyboardButton("🔙 Back to Main Menu", callback_data="cmd:main_menu")]
             ]
             reply_markup = InlineKeyboardMarkup(keyboard)
             await update.message.reply_text(error_msg, parse_mode="Markdown", reply_markup=reply_markup)
@@ -298,7 +298,6 @@ async def resources(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     messages = MESSAGES[lang]
 
-    # Build sections with clickable links and descriptions
     sections = []
     for training in PAST_TRAININGS:
         links = []
@@ -313,7 +312,6 @@ async def resources(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         sections.append(section)
 
-    # Main message
     if sections:
         formatted_text = (
             f"🌟 *{messages['resources_title']}* 🌟\n\n" +
@@ -322,7 +320,6 @@ async def resources(update: Update, context: ContextTypes.DEFAULT_TYPE):
     else:
         formatted_text = f"🌟 *{messages['resources_title']}* 🌟\n{messages['no_resources']}"
 
-    # Filter and action buttons
     keyboard = [
         [
             InlineKeyboardButton("🎥 Videos Only", callback_data="filter:videos"),
@@ -342,33 +339,46 @@ async def training_events(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     messages = MESSAGES[lang]
 
-    # Past trainings with descriptions
     past_sections = [
         f"🌟 *{t['name']}* _({t['date']})_\n_{t['description']}_"
         for t in PAST_TRAININGS
     ]
     past_text = (
         f"🌟 *{messages['trainings_past']}* 🌟\n\n" +
-        "\n-----\n".join(past_sections) +
-        "\n\n*See /resources for more details!*"
+        "\n-----\n".join(past_sections)
     )
 
-    # Upcoming trainings
     upcoming_text = (
         f"✨ *{messages['trainings_upcoming']}* ✨\n\n" +
-        "\n".join(f"📅 *{t['name']}* _({t['date']})_ - Reply /signup to join" for t in UPCOMING_TRAININGS)
+        "\n".join(f"📅 *{t['name']}* _({t['date']})_" for t in UPCOMING_TRAININGS)
     )
+
+    keyboard = [
+        [
+            InlineKeyboardButton("📚 Resources", callback_data="cmd:resources"),
+            InlineKeyboardButton("✍️ Sign Up", callback_data="cmd:signup")
+        ],
+        [InlineKeyboardButton("🔙 Back to Main Menu", callback_data="cmd:main_menu")]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
 
     await query.message.reply_text(
         f"{past_text}\n\n{upcoming_text}",
-        parse_mode="Markdown"
+        parse_mode="Markdown",
+        reply_markup=reply_markup
     )
 
 async def signup(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.message.chat_id
     lang = context.user_data.get("lang", "en")
     context.user_data["signup_step"] = "name"
-    await update.message.reply_text(f"🌟 *{MESSAGES[lang]['signup_prompt']}* 🌟", parse_mode="Markdown")
+    keyboard = [[InlineKeyboardButton("🔙 Back to Main Menu", callback_data="cmd:main_menu")]]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    await update.message.reply_text(
+        f"🌟 *{MESSAGES[lang]['signup_prompt']}* 🌟", 
+        parse_mode="Markdown", 
+        reply_markup=reply_markup
+    )
 
 async def networking(update: Update, context: ContextTypes.DEFAULT_TYPE):
     lang = context.user_data.get("lang", "en")
@@ -406,16 +416,28 @@ async def networking(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     text = (
         f"🌟 *{messages['networking_title']}* 🌟\n\n" +
-        "\n🌟----🌟\n".join(sections) +
-        "\n\n*Reply /register to join the network!*"
+        "\n🌟----🌟\n".join(sections)
     )
-    await query.message.reply_text(text, parse_mode="Markdown")
+    
+    keyboard = [
+        [InlineKeyboardButton("📝 Register", callback_data="cmd:register")],
+        [InlineKeyboardButton("🔙 Back to Main Menu", callback_data="cmd:main_menu")]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    await query.message.reply_text(text, parse_mode="Markdown", reply_markup=reply_markup)
 
 async def register(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.message.chat_id
     lang = context.user_data.get("lang", "en")
     context.user_data["register_step"] = "company"
-    await update.message.reply_text(f"🌟 *{MESSAGES[lang]['register_prompt']}* 🌟", parse_mode="Markdown")
+    keyboard = [[InlineKeyboardButton("🔙 Back to Main Menu", callback_data="cmd:main_menu")]]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    await update.message.reply_text(
+        f"🌟 *{MESSAGES[lang]['register_prompt']}* 🌟", 
+        parse_mode="Markdown", 
+        reply_markup=reply_markup
+    )
 
 async def news(update: Update, context: ContextTypes.DEFAULT_TYPE):
     lang = context.user_data.get("lang", "en")
@@ -431,10 +453,16 @@ async def news(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     text = (
         f"🌟 *{messages['news_title']}* 🌟\n\n" +
-        "\n".join(news_items) +
-        "\n\n*Use /subscribenews for updates!*"
+        "\n".join(news_items)
     )
-    await query.message.reply_text(text, parse_mode="Markdown")
+    
+    keyboard = [
+        [InlineKeyboardButton("🔔 Subscribe", callback_data="cmd:subscribenews")],
+        [InlineKeyboardButton("🔙 Back to Main Menu", callback_data="cmd:main_menu")]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    await query.message.reply_text(text, parse_mode="Markdown", reply_markup=reply_markup)
 
 async def contact(update: Update, context: ContextTypes.DEFAULT_TYPE):
     lang = context.user_data.get("lang", "en")
@@ -447,7 +475,11 @@ async def contact(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"📞 *Phone:* +251921756683\n"
         f"🏢 *Address:* Addis Ababa, Bole Sub city, Woreda 03, H.N. 4/10/A5/FL8"
     )
-    await query.message.reply_text(text, parse_mode="Markdown")
+    
+    keyboard = [[InlineKeyboardButton("🔙 Back to Main Menu", callback_data="cmd:main_menu")]]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    await query.message.reply_text(text, parse_mode="Markdown", reply_markup=reply_markup)
 
 async def subscribenews(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.callback_query.message.chat_id
@@ -455,7 +487,13 @@ async def subscribenews(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     if training_sheet.find(str(chat_id)) is None:
         training_sheet.append_row([str(chat_id), "", "", "", "", datetime.now().isoformat()])
-    await query.message.reply_text(f"🌟 *{MESSAGES[lang]['subscribed']}* 🌟", parse_mode="Markdown")
+    keyboard = [[InlineKeyboardButton("🔙 Back to Main Menu", callback_data="cmd:main_menu")]]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    await query.message.reply_text(
+        f"🌟 *{MESSAGES[lang]['subscribed']}* 🌟", 
+        parse_mode="Markdown", 
+        reply_markup=reply_markup
+    )
 
 async def learn_startup_skills(update: Update, context: ContextTypes.DEFAULT_TYPE):
     lang = context.user_data.get("lang", "en")
@@ -465,6 +503,7 @@ async def learn_startup_skills(update: Update, context: ContextTypes.DEFAULT_TYP
         [InlineKeyboardButton(f"📚 {m['name']}", callback_data=f"module:{m['id']}")]
         for m in TRAINING_MODULES
     ]
+    keyboard.append([InlineKeyboardButton("🔙 Back to Main Menu", callback_data="cmd:main_menu")])
     await query.message.reply_text(
         f"🌟 *{messages['modules_title']}* 🌟", 
         reply_markup=InlineKeyboardMarkup(keyboard), 
@@ -479,7 +518,8 @@ async def update_profile(update: Update, context: ContextTypes.DEFAULT_TYPE):
         [InlineKeyboardButton("Name", callback_data="profile:name"),
          InlineKeyboardButton("Phone", callback_data="profile:phone")],
         [InlineKeyboardButton("Email", callback_data="profile:email"),
-         InlineKeyboardButton("Company", callback_data="profile:company")]
+         InlineKeyboardButton("Company", callback_data="profile:company")],
+        [InlineKeyboardButton("🔙 Back to Main Menu", callback_data="cmd:main_menu")]
     ]
     await query.message.reply_text(
         f"🌟 *{messages['profile_prompt']}* 🌟", 
@@ -496,48 +536,52 @@ async def handle_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await handle_ask(update, context)
     elif "signup_step" in context.user_data:
         step = context.user_data["signup_step"]
+        keyboard = [[InlineKeyboardButton("🔙 Back to Main Menu", callback_data="cmd:main_menu")]]
+        reply_markup = InlineKeyboardMarkup(keyboard)
         if step == "name":
             context.user_data["name"] = text
             context.user_data["signup_step"] = "phone"
-            await update.message.reply_text(f"🌟 *{MESSAGES[lang]['phone_prompt']}* 🌟", parse_mode="Markdown")
+            await update.message.reply_text(f"🌟 *{MESSAGES[lang]['phone_prompt']}* 🌟", parse_mode="Markdown", reply_markup=reply_markup)
         elif step == "phone":
             context.user_data["phone"] = text
             context.user_data["signup_step"] = "email"
-            await update.message.reply_text(f"🌟 *{MESSAGES[lang]['email_prompt']}* 🌟", parse_mode="Markdown")
+            await update.message.reply_text(f"🌟 *{MESSAGES[lang]['email_prompt']}* 🌟", parse_mode="Markdown", reply_markup=reply_markup)
         elif step == "email":
             context.user_data["email"] = text
             context.user_data["signup_step"] = "company"
-            await update.message.reply_text(f"🌟 *{MESSAGES[lang]['company_prompt']}* 🌟", parse_mode="Markdown")
+            await update.message.reply_text(f"🌟 *{MESSAGES[lang]['company_prompt']}* 🌟", parse_mode="Markdown", reply_markup=reply_markup)
         elif step == "company":
             context.user_data["company"] = text
             context.user_data["signup_step"] = "survey"
-            await update.message.reply_text(f"🌟 *{MESSAGES[lang]['survey_company_size']}* 🌟", parse_mode="Markdown")
+            await update.message.reply_text(f"🌟 *{MESSAGES[lang]['survey_company_size']}* 🌟", parse_mode="Markdown", reply_markup=reply_markup)
         elif step == "survey":
             context.user_data["company_size"] = text
             data = [str(chat_id), context.user_data["name"], context.user_data["phone"],
                     context.user_data["email"], context.user_data["company"], datetime.now().isoformat(), text]
             training_sheet.append_row(data)
             await context.bot.send_message(MANAGER_CHAT_ID, f"New Signup: {data[1:]}")
-            await update.message.reply_text(f"🌟 *{MESSAGES[lang]['signup_thanks'].format(name=data[1])}* 🌟", parse_mode="Markdown")
+            await update.message.reply_text(f"🌟 *{MESSAGES[lang]['signup_thanks'].format(name=data[1])}* 🌟", parse_mode="Markdown", reply_markup=reply_markup)
             del context.user_data["signup_step"]
     elif "register_step" in context.user_data:
         step = context.user_data["register_step"]
+        keyboard = [[InlineKeyboardButton("🔙 Back to Main Menu", callback_data="cmd:main_menu")]]
+        reply_markup = InlineKeyboardMarkup(keyboard)
         if step == "company":
             context.user_data["company"] = text
             context.user_data["register_step"] = "phone"
-            await update.message.reply_text(f"🌟 *{MESSAGES[lang]['phone_prompt']}* 🌟", parse_mode="Markdown")
+            await update.message.reply_text(f"🌟 *{MESSAGES[lang]['phone_prompt']}* 🌟", parse_mode="Markdown", reply_markup=reply_markup)
         elif step == "phone":
             context.user_data["phone"] = text
             context.user_data["register_step"] = "email"
-            await update.message.reply_text(f"🌟 *{MESSAGES[lang]['email_prompt']}* 🌟", parse_mode="Markdown")
+            await update.message.reply_text(f"🌟 *{MESSAGES[lang]['email_prompt']}* 🌟", parse_mode="Markdown", reply_markup=reply_markup)
         elif step == "email":
             context.user_data["email"] = text
             context.user_data["register_step"] = "description"
-            await update.message.reply_text(f"🌟 *{MESSAGES[lang]['description_prompt']}* 🌟", parse_mode="Markdown")
+            await update.message.reply_text(f"🌟 *{MESSAGES[lang]['description_prompt']}* 🌟", parse_mode="Markdown", reply_markup=reply_markup)
         elif step == "description":
             context.user_data["description"] = text
             context.user_data["register_step"] = "manager"
-            await update.message.reply_text(f"🌟 *{MESSAGES[lang]['manager_prompt']}* 🌟", parse_mode="Markdown")
+            await update.message.reply_text(f"🌟 *{MESSAGES[lang]['manager_prompt']}* 🌟", parse_mode="Markdown", reply_markup=reply_markup)
         elif step == "manager":
             context.user_data["manager"] = text
             context.user_data["register_step"] = "categories"
@@ -546,7 +590,8 @@ async def handle_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
                  InlineKeyboardButton("Agriculture", callback_data="cat:Agriculture")],
                 [InlineKeyboardButton("Packaging", callback_data="cat:Packaging"),
                  InlineKeyboardButton("Marketing", callback_data="cat:Marketing")],
-                [InlineKeyboardButton("Done", callback_data="cat:done")]
+                [InlineKeyboardButton("Done", callback_data="cat:done")],
+                [InlineKeyboardButton("🔙 Back to Main Menu", callback_data="cmd:main_menu")]
             ]
             await update.message.reply_text(f"🌟 *{MESSAGES[lang]['categories_prompt']}* 🌟", reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown")
         elif step == "public":
@@ -557,39 +602,44 @@ async def handle_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     "Yes" if context.user_data["public"] else "No"]
             network_sheet.append_row(data)
             await context.bot.send_message(MANAGER_CHAT_ID, f"New Network Reg: {data[1:]}")
-            await update.message.reply_text(f"🌟 *{MESSAGES[lang]['register_thanks'].format(company=data[1])}* 🌟", parse_mode="Markdown")
+            await update.message.reply_text(f"🌟 *{MESSAGES[lang]['register_thanks'].format(company=data[1])}* 🌟", parse_mode="Markdown", reply_markup=reply_markup)
             del context.user_data["register_step"]
     elif "quiz_step" in context.user_data:
         step = context.user_data["quiz_step"]
         module_id = context.user_data["quiz_module"]
         module = next(m for m in TRAINING_MODULES if m["id"] == module_id)
         question = module["quiz"][step - 1]
+        keyboard = [[InlineKeyboardButton("🔙 Back to Main Menu", callback_data="cmd:main_menu")]]
+        reply_markup = InlineKeyboardMarkup(keyboard)
         if text.lower() == question["answer"].lower():
-            await update.message.reply_text(f"🌟 *{MESSAGES[lang]['quiz_correct'].format(explain=question['explain'])}* 🌟", parse_mode="Markdown")
+            await update.message.reply_text(f"🌟 *{MESSAGES[lang]['quiz_correct'].format(explain=question['explain'])}* 🌟", parse_mode="Markdown", reply_markup=reply_markup)
             context.user_data["quiz_score"] = context.user_data.get("quiz_score", 0) + 1
         else:
-            await update.message.reply_text(f"🌟 *{MESSAGES[lang]['quiz_wrong'].format(answer=question['answer'], explain=question['explain'])}* 🌟", parse_mode="Markdown")
+            await update.message.reply_text(f"🌟 *{MESSAGES[lang]['quiz_wrong'].format(answer=question['answer'], explain=question['explain'])}* 🌟", parse_mode="Markdown", reply_markup=reply_markup)
         if step < len(module["quiz"]):
             context.user_data["quiz_step"] += 1
             next_q = module["quiz"][step]
             keyboard = [[InlineKeyboardButton(opt, callback_data=f"quiz:{opt}")] for opt in next_q["options"]]
+            keyboard.append([InlineKeyboardButton("🔙 Back to Main Menu", callback_data="cmd:main_menu")])
             await update.message.reply_text(f"🌟 *{MESSAGES[lang]['quiz_question'].format(num=step + 1, q=next_q['q'])}* 🌟",
                                             reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown")
         else:
             score = context.user_data.get("quiz_score", 0)
             context.user_data["completed_modules"] = context.user_data.get("completed_modules", []) + [module_id]
-            await update.message.reply_text(f"🌟 *{MESSAGES[lang]['quiz_done'].format(score=score, total=len(module['quiz']))}* 🌟", parse_mode="Markdown")
+            await update.message.reply_text(f"🌟 *{MESSAGES[lang]['quiz_done'].format(score=score, total=len(module['quiz']))}* 🌟", parse_mode="Markdown", reply_markup=reply_markup)
             del context.user_data["quiz_step"]
             del context.user_data["quiz_score"]
             if len(context.user_data["completed_modules"]) == 2:
-                await update.message.reply_text(f"🌟 *{MESSAGES[lang]['survey_satisfaction']}* 🌟", parse_mode="Markdown")
+                await update.message.reply_text(f"🌟 *{MESSAGES[lang]['survey_satisfaction']}* 🌟", parse_mode="Markdown", reply_markup=reply_markup)
                 context.user_data["survey_step"] = "mid"
             elif len(context.user_data["completed_modules"]) == len(TRAINING_MODULES):
-                await update.message.reply_text(f"🌟 *{MESSAGES[lang]['survey_satisfaction']}* 🌟", parse_mode="Markdown")
+                await update.message.reply_text(f"🌟 *{MESSAGES[lang]['survey_satisfaction']}* 🌟", parse_mode="Markdown", reply_markup=reply_markup)
                 context.user_data["survey_step"] = "end"
     elif "profile_step" in context.user_data:
         step = context.user_data["profile_step"]
         cell = training_sheet.find(str(chat_id))
+        keyboard = [[InlineKeyboardButton("🔙 Back to Main Menu", callback_data="cmd:main_menu")]]
+        reply_markup = InlineKeyboardMarkup(keyboard)
         if cell:
             row = cell.row
             if step == "name":
@@ -600,18 +650,20 @@ async def handle_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 training_sheet.update_cell(row, 4, text)
             elif step == "company":
                 training_sheet.update_cell(row, 5, text)
-            await update.message.reply_text(f"🌟 *{MESSAGES[lang]['profile_updated']}* 🌟", parse_mode="Markdown")
+            await update.message.reply_text(f"🌟 *{MESSAGES[lang]['profile_updated']}* 🌟", parse_mode="Markdown", reply_markup=reply_markup)
             del context.user_data["profile_step"]
     elif "survey_step" in context.user_data:
+        keyboard = [[InlineKeyboardButton("🔙 Back to Main Menu", callback_data="cmd:main_menu")]]
+        reply_markup = InlineKeyboardMarkup(keyboard)
         try:
             rating = int(text)
             if 1 <= rating <= 5:
-                await update.message.reply_text(f"🌟 *{MESSAGES[lang]['survey_thanks']}* 🌟", parse_mode="Markdown")
+                await update.message.reply_text(f"🌟 *{MESSAGES[lang]['survey_thanks']}* 🌟", parse_mode="Markdown", reply_markup=reply_markup)
                 del context.user_data["survey_step"]
             else:
-                await update.message.reply_text("Please enter a number between 1 and 5.")
+                await update.message.reply_text("Please enter a number between 1 and 5.", reply_markup=reply_markup)
         except ValueError:
-            await update.message.reply_text("Please enter a valid number (1-5).")
+            await update.message.reply_text("Please enter a valid number (1-5).", reply_markup=reply_markup)
 
 async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
@@ -637,7 +689,9 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "update_profile": update_profile,
                 "ask_again": ask,
                 "main_menu": lambda u, c: show_options(u, c, lang),
-                "all_resources": lambda u, c: all_resources(u, c, lang)
+                "all_resources": lambda u, c: all_resources(u, c, lang),
+                "signup": signup,
+                "register": register
             }
             if cmd in handlers:
                 await handlers[cmd](update, context)
@@ -679,60 +733,69 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
             module_id = int(query.data.split("module:")[1])
             module = next(m for m in TRAINING_MODULES if m["id"] == module_id)
             completed = context.user_data.get("completed_modules", [])
+            keyboard = [[InlineKeyboardButton("🔙 Back to Main Menu", callback_data="cmd:main_menu")]]
+            reply_markup = InlineKeyboardMarkup(keyboard)
             if all(prereq in completed for prereq in module["prereq"]):
-                await query.message.reply_text(f"🌟 *{MESSAGES[lang]['module_study'].format(name=module['name'], content=module['content'])}* 🌟", parse_mode="Markdown")
+                await query.message.reply_text(f"🌟 *{MESSAGES[lang]['module_study'].format(name=module['name'], content=module['content'])}* 🌟", parse_mode="Markdown", reply_markup=reply_markup)
                 keyboard = [[InlineKeyboardButton(opt, callback_data=f"quiz:{opt}")] for opt in module["quiz"][0]["options"]]
+                keyboard.append([InlineKeyboardButton("🔙 Back to Main Menu", callback_data="cmd:main_menu")])
                 await query.message.reply_text(f"🌟 *{MESSAGES[lang]['quiz_start'].format(name=module['name'])}* 🌟", parse_mode="Markdown")
                 await query.message.reply_text(f"🌟 *{MESSAGES[lang]['quiz_question'].format(num=1, q=module['quiz'][0]['q'])}* 🌟",
                                                reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown")
                 context.user_data["quiz_step"] = 1
                 context.user_data["quiz_module"] = module_id
             else:
-                await query.message.reply_text(f"🌟 *{MESSAGES[lang]['prereq_error']}* 🌟", parse_mode="Markdown")
+                await query.message.reply_text(f"🌟 *{MESSAGES[lang]['prereq_error']}* 🌟", parse_mode="Markdown", reply_markup=reply_markup)
         elif "quiz:" in query.data:
             answer = query.data.split("quiz:")[1]
             step = context.user_data["quiz_step"]
             module_id = context.user_data["quiz_module"]
             module = next(m for m in TRAINING_MODULES if m["id"] == module_id)
             question = module["quiz"][step - 1]
+            keyboard = [[InlineKeyboardButton("🔙 Back to Main Menu", callback_data="cmd:main_menu")]]
+            reply_markup = InlineKeyboardMarkup(keyboard)
             if answer == question["answer"]:
-                await query.message.reply_text(f"🌟 *{MESSAGES[lang]['quiz_correct'].format(explain=question['explain'])}* 🌟", parse_mode="Markdown")
+                await query.message.reply_text(f"🌟 *{MESSAGES[lang]['quiz_correct'].format(explain=question['explain'])}* 🌟", parse_mode="Markdown", reply_markup=reply_markup)
                 context.user_data["quiz_score"] = context.user_data.get("quiz_score", 0) + 1
             else:
-                await query.message.reply_text(f"🌟 *{MESSAGES[lang]['quiz_wrong'].format(answer=question['answer'], explain=question['explain'])}* 🌟", parse_mode="Markdown")
+                await query.message.reply_text(f"🌟 *{MESSAGES[lang]['quiz_wrong'].format(answer=question['answer'], explain=question['explain'])}* 🌟", parse_mode="Markdown", reply_markup=reply_markup)
             if step < len(module["quiz"]):
                 context.user_data["quiz_step"] += 1
                 next_q = module["quiz"][step]
                 keyboard = [[InlineKeyboardButton(opt, callback_data=f"quiz:{opt}")] for opt in next_q["options"]]
+                keyboard.append([InlineKeyboardButton("🔙 Back to Main Menu", callback_data="cmd:main_menu")])
                 await query.message.reply_text(f"🌟 *{MESSAGES[lang]['quiz_question'].format(num=step + 1, q=next_q['q'])}* 🌟",
                                                reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown")
             else:
                 score = context.user_data.get("quiz_score", 0)
                 context.user_data["completed_modules"] = context.user_data.get("completed_modules", []) + [module_id]
-                await query.message.reply_text(f"🌟 *{MESSAGES[lang]['quiz_done'].format(score=score, total=len(module['quiz']))}* 🌟", parse_mode="Markdown")
+                await query.message.reply_text(f"🌟 *{MESSAGES[lang]['quiz_done'].format(score=score, total=len(module['quiz']))}* 🌟", parse_mode="Markdown", reply_markup=reply_markup)
                 del context.user_data["quiz_step"]
                 del context.user_data["quiz_score"]
                 if len(context.user_data["completed_modules"]) == 2:
-                    await query.message.reply_text(f"🌟 *{MESSAGES[lang]['survey_satisfaction']}* 🌟", parse_mode="Markdown")
+                    await query.message.reply_text(f"🌟 *{MESSAGES[lang]['survey_satisfaction']}* 🌟", parse_mode="Markdown", reply_markup=reply_markup)
                     context.user_data["survey_step"] = "mid"
                 elif len(context.user_data["completed_modules"]) == len(TRAINING_MODULES):
-                    await query.message.reply_text(f"🌟 *{MESSAGES[lang]['survey_satisfaction']}* 🌟", parse_mode="Markdown")
+                    await query.message.reply_text(f"🌟 *{MESSAGES[lang]['survey_satisfaction']}* 🌟", parse_mode="Markdown", reply_markup=reply_markup)
                     context.user_data["survey_step"] = "end"
         elif "profile:" in query.data:
             field = query.data.split("profile:")[1]
             context.user_data["profile_step"] = field
-            await query.message.reply_text(f"🌟 *{MESSAGES[lang][f'profile_{field}']}* 🌟", parse_mode="Markdown")
+            keyboard = [[InlineKeyboardButton("🔙 Back to Main Menu", callback_data="cmd:main_menu")]]
+            await query.message.reply_text(f"🌟 *{MESSAGES[lang][f'profile_{field}']}* 🌟", parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
         elif "cat:" in query.data:
             cat = query.data.split("cat:")[1]
             if cat == "done":
                 context.user_data["register_step"] = "public"
-                await query.edit_message_text(f"🌟 *{MESSAGES[lang]['public_prompt']}* 🌟", parse_mode="Markdown")
+                keyboard = [[InlineKeyboardButton("🔙 Back to Main Menu", callback_data="cmd:main_menu")]]
+                await query.edit_message_text(f"🌟 *{MESSAGES[lang]['public_prompt']}* 🌟", parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
             else:
                 context.user_data.setdefault("categories", []).append(cat)
                 await query.edit_message_text(f"🌟 *{MESSAGES[lang]['cat_added'].format(cat=cat)}* 🌟", parse_mode="Markdown")
     except telegram.error.BadRequest as e:
         print(f"Query error: {str(e)}")
-        await query.message.reply_text("Sorry, that button timed out. Please try again!")
+        keyboard = [[InlineKeyboardButton("🔙 Back to Main Menu", callback_data="cmd:main_menu")]]
+        await query.message.reply_text("Sorry, that button timed out. Please try again!", reply_markup=InlineKeyboardMarkup(keyboard))
 
 async def all_resources(update: Update, context: ContextTypes.DEFAULT_TYPE, lang):
     query = update.callback_query
@@ -742,10 +805,12 @@ async def all_resources(update: Update, context: ContextTypes.DEFAULT_TYPE, lang
             links.append(f"📹 *{training['name']}* Video: {training['video']}")
         if training.get("resources"):
             links.append(f"📄 *{training['name']}* Resource: {training['resources']}")
+    keyboard = [[InlineKeyboardButton("🔙 Back to Main Menu", callback_data="cmd:main_menu")]]
     await query.message.reply_text(
         f"🌟 *All Resources* 🌟\n\n" + "\n".join(links),
         parse_mode="Markdown",
-        disable_web_page_preview=True
+        disable_web_page_preview=True,
+        reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
 def schedule_notifications(app):
@@ -761,7 +826,8 @@ def schedule_notifications(app):
 async def notify_training(app, name, date):
     for row in training_sheet.get_all_records():
         chat_id = row["ChatID"]
-        await app.bot.send_message(chat_id, f"🌟 Reminder: *{name}* training on _{date}_ is in 7 days! Reply /training_events for details.", parse_mode="Markdown")
+        keyboard = [[InlineKeyboardButton("🔙 Back to Main Menu", callback_data="cmd:main_menu")]]
+        await app.bot.send_message(chat_id, f"🌟 Reminder: *{name}* training on _{date}_ is in 7 days! Reply /training_events for details.", parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
 
 def main():
     app = Application.builder().token("7910442120:AAFMUhnwTONoyF1xilwRpjWIRCTmGa0den4").build()
