@@ -228,7 +228,7 @@ async def handle_ask(update: Update, context: ContextTypes.DEFAULT_TYPE):
             payload = {
                 "inputs": f"You are a helpful AI for startup founders. {question}",
                 "parameters": {
-                    "max_new_tokens": 200,
+                    "max_new_tokens": 100,
                     "temperature": 0.7,
                     "return_full_text": False
                 }
@@ -272,13 +272,32 @@ async def handle_ask(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def resources(update: Update, context: ContextTypes.DEFAULT_TYPE):
     lang = context.user_data.get("lang", "en")
     query = update.callback_query
-    past_resources = "\n".join(
-        f"- {t['name']} ({t['date']}): {t['resources'] or MESSAGES[lang]['no_resources']}"
-        for t in PAST_TRAININGS if t.get("resources")
-    )
-    await query.message.reply_text(
-        f"{MESSAGES[lang]['resources_title']}\n" + (past_resources or MESSAGES[lang]["no_resources"])
-    )
+    messages = MESSAGES[lang]
+
+    # Build the resource list with Markdown and inline buttons
+    resource_list = []
+    for idx, training in enumerate(PAST_TRAININGS, 1):
+        if training.get("resources"):
+            resource_list.append(
+                f"{idx}. *{training['name']}* _({training['date']})_ "
+                f"[View Resource]({training['resources']})"
+            )
+
+    # Construct the message
+    if resource_list:
+        formatted_text = (
+            f"📚 *{messages['resources_title']}* 📚\n" +
+            "\n".join(resource_list) +
+            "\n---\n"
+        )
+    else:
+        formatted_text = f"📚 *{messages['resources_title']}* 📚\n{messages['no_resources']}\n---\n"
+
+    # Add "Back to Main Menu" button
+    keyboard = [[InlineKeyboardButton("🔙 Back to Main Menu", callback_data="cmd:main_menu")]]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+
+    await query.message.reply_text(formatted_text, parse_mode="Markdown", reply_markup=reply_markup, disable_web_page_preview=True)
 
 async def training_events(update: Update, context: ContextTypes.DEFAULT_TYPE):
     lang = context.user_data.get("lang", "en")
@@ -527,8 +546,8 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "subscribenews": subscribenews,
                 "learn_startup_skills": learn_startup_skills,
                 "update_profile": update_profile,
-                "ask_again": ask,  # Reuse ask() for "Ask Another Question" or "Try Again"
-                "main_menu": lambda u, c: show_options(u, c, lang)  # Back to main menu
+                "ask_again": ask,
+                "main_menu": lambda u, c: show_options(u, c, lang)
             }
             if cmd in handlers:
                 await handlers[cmd](update, context)
