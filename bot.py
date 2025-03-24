@@ -8,11 +8,8 @@ import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 import telegram.error
-from flask import Flask, request, Response
 import asyncio
 import httpx
-from hypercorn.config import Config
-from hypercorn.asyncio import serve
 
 # Google Sheets setup
 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
@@ -585,7 +582,7 @@ async def notify_training(app, name, date):
         chat_id = row["ChatID"]
         await app.bot.send_message(chat_id, f"Reminder: {name} training on {date} is in 7 days! Reply /training_events for details.")
 
-async def keep_alive():
+async def keep_alive(app):
     print("Keeping Render awake...")
     async with httpx.AsyncClient() as client:
         try:
@@ -594,37 +591,30 @@ async def keep_alive():
         except Exception as e:
             print(f"Ping failed: {str(e)}")
 
-# Flask app setup
-flask_app = Flask(__name__)
+# Application setup with polling
 application = Application.builder().token("7910442120:AAFMUhnwTONoyF1xilwRpjWIRCTmGa0den4").build()
 
-# Add handlers to the Telegram application
+# Add handlers
 application.add_handler(CommandHandler("start", start))
 application.add_handler(CommandHandler("signup", signup))
 application.add_handler(CommandHandler("register", register))
 application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_reply))
 application.add_handler(CallbackQueryHandler(button))
 
-@flask_app.route('/', methods=['POST'])
-async def webhook():
-    update = Update.de_json(request.get_json(force=True), application.bot)
-    await application.process_update(update)
-    return '', 200
-
 async def main():
-    loop = asyncio.get_event_loop()
     await application.initialize()
     schedule_notifications(application)
-    scheduler.add_job(keep_alive, "interval", minutes=10)  # Ping every 10 mins to keep Render awake
+    scheduler.add_job(keep_alive, "interval", minutes=10, args=[application])  # Still pings to keep Render awake
     scheduler.start()
-    config = Config()
-    config.bind = ["0.0.0.0:10000"]
+    await application.start()
+    await application.updater.start_polling()
     try:
-        await serve(flask_app, config)
+        await asyncio.Event().wait()  # Run forever until interrupted
     except asyncio.CancelledError:
         print("Shutting down gracefully...")
     finally:
         scheduler.shutdown()
+        await application.updater.stop()
         await application.stop()
         print("Bot has stopped.")
 
