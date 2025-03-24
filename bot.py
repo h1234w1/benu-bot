@@ -8,6 +8,7 @@ import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 import telegram.error
+import urllib.parse
 
 # Google Sheets setup
 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
@@ -285,42 +286,46 @@ async def resources(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     messages = MESSAGES[lang]
 
-    # Build sections for each resource
+    # Build sections with clickable links
     sections = []
-    keyboard = []
-    for idx, training in enumerate(PAST_TRAININGS):
-        buttons = []
+    for training in PAST_TRAININGS:
+        links = []
         if training.get("video"):
-            buttons.append(InlineKeyboardButton("📹 Watch", url=training["video"]))
+            links.append(f"[Watch]({training['video']})")
         if training.get("resources"):
-            buttons.append(InlineKeyboardButton("📄 Read", url=training["resources"]))
-        buttons.append(InlineKeyboardButton("🔍 Preview", callback_data=f"preview:{idx}"))
-        keyboard.append(buttons)
-        sections.append(
-            f"✨ *{training['name']}* _({training['date']})_"
+            links.append(f"[Read]({training['resources']})")
+        # URL-encode description for Preview link
+        encoded_desc = urllib.parse.quote(training["description"])
+        links.append(f"[Preview](tg://msg_url?text={encoded_desc})")
+        section = (
+            f"✨ *{training['name']}* _({training['date']})_\n"
+            f"{' | '.join(links)}"
         )
+        sections.append(section)
 
     # Main message
     if sections:
         formatted_text = (
             f"📚 *{messages['resources_title']}* 📚\n\n" +
-            "\n---\n".join(sections)
+            "\n=====\n".join(sections)
         )
     else:
         formatted_text = f"📚 *{messages['resources_title']}* 📚\n{messages['no_resources']}"
 
     # Filter and action buttons
-    keyboard.append([
-        InlineKeyboardButton("🎥 Videos Only", callback_data="filter:videos"),
-        InlineKeyboardButton("📜 Docs Only", callback_data="filter:resources")
-    ])
-    keyboard.append([
-        InlineKeyboardButton("⬇️ Get All Resources", callback_data="cmd:all_resources"),
-        InlineKeyboardButton("🔙 Back to Main Menu", callback_data="cmd:main_menu")
-    ])
+    keyboard = [
+        [
+            InlineKeyboardButton("🎥 Videos Only", callback_data="filter:videos"),
+            InlineKeyboardButton("📜 Docs Only", callback_data="filter:resources")
+        ],
+        [
+            InlineKeyboardButton("⬇️ Get All Resources", callback_data="cmd:all_resources"),
+            InlineKeyboardButton("🔙 Back to Main Menu", callback_data="cmd:main_menu")
+        ]
+    ]
     reply_markup = InlineKeyboardMarkup(keyboard)
 
-    await query.message.reply_text(formatted_text, parse_mode="Markdown", reply_markup=reply_markup)
+    await query.message.reply_text(formatted_text, parse_mode="Markdown", reply_markup=reply_markup, disable_web_page_preview=True)
 
 async def training_events(update: Update, context: ContextTypes.DEFAULT_TYPE):
     lang = context.user_data.get("lang", "en")
@@ -575,10 +580,6 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
             }
             if cmd in handlers:
                 await handlers[cmd](update, context)
-        elif "preview:" in query.data:
-            idx = int(query.data.split("preview:")[1])
-            training = PAST_TRAININGS[idx]
-            await query.message.reply_text(f"*{training['name']}*\n{training['description']}", parse_mode="Markdown")
         elif "filter:" in query.data:
             filter_type = query.data.split("filter:")[1]
             filtered_trainings = (
@@ -586,29 +587,34 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 [t for t in PAST_TRAININGS if t.get("resources")]
             )
             sections = []
-            keyboard = []
-            for idx, training in enumerate(filtered_trainings):
-                buttons = []
+            for training in filtered_trainings:
+                links = []
                 if training.get("video"):
-                    buttons.append(InlineKeyboardButton("📹 Watch", url=training["video"]))
+                    links.append(f"[Watch]({training['video']})")
                 if training.get("resources"):
-                    buttons.append(InlineKeyboardButton("📄 Read", url=training["resources"]))
-                buttons.append(InlineKeyboardButton("🔍 Preview", callback_data=f"preview:{PAST_TRAININGS.index(training)}"))
-                keyboard.append(buttons)
-                sections.append(f"✨ *{training['name']}* _({training['date']})_")
+                    links.append(f"[Read]({training['resources']})")
+                encoded_desc = urllib.parse.quote(training["description"])
+                links.append(f"[Preview](tg://msg_url?text={encoded_desc})")
+                section = (
+                    f"✨ *{training['name']}* _({training['date']})_\n"
+                    f"{' | '.join(links)}"
+                )
+                sections.append(section)
             formatted_text = (
                 f"📚 *{MESSAGES[lang]['resources_title']}* 📚\n\n" +
-                "\n---\n".join(sections)
+                "\n=====\n".join(sections)
             )
-            keyboard.append([
-                InlineKeyboardButton("🎥 Videos Only", callback_data="filter:videos"),
-                InlineKeyboardButton("📜 Docs Only", callback_data="filter:resources")
-            ])
-            keyboard.append([
-                InlineKeyboardButton("⬇️ Get All Resources", callback_data="cmd:all_resources"),
-                InlineKeyboardButton("🔙 Back to Main Menu", callback_data="cmd:main_menu")
-            ])
-            await query.edit_message_text(formatted_text, parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
+            keyboard = [
+                [
+                    InlineKeyboardButton("🎥 Videos Only", callback_data="filter:videos"),
+                    InlineKeyboardButton("📜 Docs Only", callback_data="filter:resources")
+                ],
+                [
+                    InlineKeyboardButton("⬇️ Get All Resources", callback_data="cmd:all_resources"),
+                    InlineKeyboardButton("🔙 Back to Main Menu", callback_data="cmd:main_menu")
+                ]
+            ]
+            await query.edit_message_text(formatted_text, parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard), disable_web_page_preview=True)
         elif "module:" in query.data:
             module_id = int(query.data.split("module:")[1])
             module = next(m for m in TRAINING_MODULES if m["id"] == module_id)
