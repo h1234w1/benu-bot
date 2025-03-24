@@ -159,7 +159,7 @@ MESSAGES = {
         "phone_prompt": "እባክዎ ስልክ ቁጥርዎን ያስፈልጋል:",
         "email_prompt": "እባክዎ ኢሜልዎን ያስፈልጋል:",
         "company_prompt": "እባክዎ የኩባንያዎን ስም ያስፈልጋል:",
-        "description_prompt": "እባክዎ የኩባንያዎ መግለጫ ያስፈልጋል:",
+        "description_prompt": "እባክዎ የኩባኔተዎ መግለጫ ያስፈልጋል:",
         "manager_prompt": "እባክዎ የሥራ አስኪያጁን ስም ያስፈልጋል:",
         "categories_prompt": "ምድቦችን ይምረጡ (ጨርሰዋል የሚለውን ይጫኑ):",
         "public_prompt": "ኢሜልዎን በይፋ ይጋሩ? (አዎ/አይ):",
@@ -228,7 +228,7 @@ async def handle_ask(update: Update, context: ContextTypes.DEFAULT_TYPE):
             payload = {
                 "inputs": f"You are a helpful AI for startup founders. {question}",
                 "parameters": {
-                    "max_new_tokens": 100,  # Reduced for speed
+                    "max_new_tokens": 200,
                     "temperature": 0.7,
                     "return_full_text": False
                 }
@@ -239,10 +239,33 @@ async def handle_ask(update: Update, context: ContextTypes.DEFAULT_TYPE):
             print(f"Response body: {response.text}")
             response.raise_for_status()
             answer = response.json()[0]["generated_text"].strip()
-            await update.message.reply_text(answer)
+
+            # Fancy formatting with Markdown
+            formatted_answer = (
+                f"✨ *Your Answer* ✨\n"
+                f"➡️ *Question:* {question}\n"
+                f"📝 *Answer:* _{answer}_\n"
+                f"🎉 Powered by BenuBot!"
+            )
+            keyboard = [
+                [InlineKeyboardButton("Ask Another Question", callback_data="cmd:ask_again"),
+                 InlineKeyboardButton("Back to Main Menu", callback_data="cmd:main_menu")]
+            ]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            await update.message.reply_text(formatted_answer, parse_mode="Markdown", reply_markup=reply_markup)
         except Exception as e:
             print(f"HF API error: {str(e)}")
-            await update.message.reply_text(MESSAGES[lang]["ask_error"])
+            error_msg = (
+                f"⚠️ *Oops!* ⚠️\n"
+                f"Sorry, I couldn’t fetch an answer right now.\n"
+                f"Try again later!"
+            )
+            keyboard = [
+                [InlineKeyboardButton("Try Again", callback_data="cmd:ask_again"),
+                 InlineKeyboardButton("Back to Main Menu", callback_data="cmd:main_menu")]
+            ]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            await update.message.reply_text(error_msg, parse_mode="Markdown", reply_markup=reply_markup)
         finally:
             del context.user_data["asking"]
 
@@ -484,7 +507,7 @@ async def handle_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
-    await query.answer()  # Acknowledge immediately to avoid timeout
+    await query.answer()
     lang = context.user_data.get("lang", "en")
     print(f"Button clicked: {query.data}")
 
@@ -503,7 +526,9 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "contact": contact,
                 "subscribenews": subscribenews,
                 "learn_startup_skills": learn_startup_skills,
-                "update_profile": update_profile
+                "update_profile": update_profile,
+                "ask_again": ask,  # Reuse ask() for "Ask Another Question" or "Try Again"
+                "main_menu": lambda u, c: show_options(u, c, lang)  # Back to main menu
             }
             if cmd in handlers:
                 await handlers[cmd](update, context)
