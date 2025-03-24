@@ -36,8 +36,20 @@ UPCOMING_TRAININGS = [
     {"name": "Marketing for Startups", "date": "2025-04-20", "resources": None},
 ]
 PAST_TRAININGS = [
-    {"name": "Intro to Fortification", "date": "2025-03-10", "video": "https://youtube.com/example", "resources": "https://drive.google.com/example"},
-    {"name": "Biscuit Processing Techniques", "date": "2025-03-20", "video": "https://youtu.be/Q9TCM89oNfU?si=5Aia87X1csYSZ4g6", "resources": "https://drive.google.com/file/d/1HTr62gOcWHEU76-OXDnzJRf11l7nXKPv/view"},
+    {
+        "name": "Intro to Fortification",
+        "date": "2025-03-10",
+        "video": "https://youtube.com/example",
+        "resources": "https://drive.google.com/example",
+        "description": "Learn the basics of fortifying biscuits with nutrients."
+    },
+    {
+        "name": "Biscuit Processing Techniques",
+        "date": "2025-03-20",
+        "video": "https://youtu.be/Q9TCM89oNfU?si=5Aia87X1csYSZ4g6",
+        "resources": "https://drive.google.com/file/d/1HTr62gOcWHEU76-OXDnzJRf11l7nXKPv/view",
+        "description": "Techniques for efficient biscuit production."
+    },
 ]
 TRAINING_MODULES = [
     {
@@ -240,7 +252,6 @@ async def handle_ask(update: Update, context: ContextTypes.DEFAULT_TYPE):
             response.raise_for_status()
             answer = response.json()[0]["generated_text"].strip()
 
-            # Fancy formatting with Markdown
             formatted_answer = (
                 f"✨ *Your Answer* ✨\n"
                 f"➡️ *Question:* {question}\n"
@@ -274,30 +285,42 @@ async def resources(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     messages = MESSAGES[lang]
 
-    # Build the resource list with Markdown and inline buttons
-    resource_list = []
-    for idx, training in enumerate(PAST_TRAININGS, 1):
+    # Build sections for each resource
+    sections = []
+    keyboard = []
+    for idx, training in enumerate(PAST_TRAININGS):
+        buttons = []
+        if training.get("video"):
+            buttons.append(InlineKeyboardButton("📹 Watch", url=training["video"]))
         if training.get("resources"):
-            resource_list.append(
-                f"{idx}. *{training['name']}* _({training['date']})_ "
-                f"[View Resource]({training['resources']})"
-            )
+            buttons.append(InlineKeyboardButton("📄 Read", url=training["resources"]))
+        buttons.append(InlineKeyboardButton("🔍 Preview", callback_data=f"preview:{idx}"))
+        keyboard.append(buttons)
+        sections.append(
+            f"✨ *{training['name']}* _({training['date']})_"
+        )
 
-    # Construct the message
-    if resource_list:
+    # Main message
+    if sections:
         formatted_text = (
-            f"📚 *{messages['resources_title']}* 📚\n" +
-            "\n".join(resource_list) +
-            "\n---\n"
+            f"📚 *{messages['resources_title']}* 📚\n\n" +
+            "\n---\n".join(sections)
         )
     else:
-        formatted_text = f"📚 *{messages['resources_title']}* 📚\n{messages['no_resources']}\n---\n"
+        formatted_text = f"📚 *{messages['resources_title']}* 📚\n{messages['no_resources']}"
 
-    # Add "Back to Main Menu" button
-    keyboard = [[InlineKeyboardButton("🔙 Back to Main Menu", callback_data="cmd:main_menu")]]
+    # Filter and action buttons
+    keyboard.append([
+        InlineKeyboardButton("🎥 Videos Only", callback_data="filter:videos"),
+        InlineKeyboardButton("📜 Docs Only", callback_data="filter:resources")
+    ])
+    keyboard.append([
+        InlineKeyboardButton("⬇️ Get All Resources", callback_data="cmd:all_resources"),
+        InlineKeyboardButton("🔙 Back to Main Menu", callback_data="cmd:main_menu")
+    ])
     reply_markup = InlineKeyboardMarkup(keyboard)
 
-    await query.message.reply_text(formatted_text, parse_mode="Markdown", reply_markup=reply_markup, disable_web_page_preview=True)
+    await query.message.reply_text(formatted_text, parse_mode="Markdown", reply_markup=reply_markup)
 
 async def training_events(update: Update, context: ContextTypes.DEFAULT_TYPE):
     lang = context.user_data.get("lang", "en")
@@ -547,10 +570,45 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "learn_startup_skills": learn_startup_skills,
                 "update_profile": update_profile,
                 "ask_again": ask,
-                "main_menu": lambda u, c: show_options(u, c, lang)
+                "main_menu": lambda u, c: show_options(u, c, lang),
+                "all_resources": lambda u, c: all_resources(u, c, lang)
             }
             if cmd in handlers:
                 await handlers[cmd](update, context)
+        elif "preview:" in query.data:
+            idx = int(query.data.split("preview:")[1])
+            training = PAST_TRAININGS[idx]
+            await query.message.reply_text(f"*{training['name']}*\n{training['description']}", parse_mode="Markdown")
+        elif "filter:" in query.data:
+            filter_type = query.data.split("filter:")[1]
+            filtered_trainings = (
+                [t for t in PAST_TRAININGS if t.get("video")] if filter_type == "videos" else
+                [t for t in PAST_TRAININGS if t.get("resources")]
+            )
+            sections = []
+            keyboard = []
+            for idx, training in enumerate(filtered_trainings):
+                buttons = []
+                if training.get("video"):
+                    buttons.append(InlineKeyboardButton("📹 Watch", url=training["video"]))
+                if training.get("resources"):
+                    buttons.append(InlineKeyboardButton("📄 Read", url=training["resources"]))
+                buttons.append(InlineKeyboardButton("🔍 Preview", callback_data=f"preview:{PAST_TRAININGS.index(training)}"))
+                keyboard.append(buttons)
+                sections.append(f"✨ *{training['name']}* _({training['date']})_")
+            formatted_text = (
+                f"📚 *{MESSAGES[lang]['resources_title']}* 📚\n\n" +
+                "\n---\n".join(sections)
+            )
+            keyboard.append([
+                InlineKeyboardButton("🎥 Videos Only", callback_data="filter:videos"),
+                InlineKeyboardButton("📜 Docs Only", callback_data="filter:resources")
+            ])
+            keyboard.append([
+                InlineKeyboardButton("⬇️ Get All Resources", callback_data="cmd:all_resources"),
+                InlineKeyboardButton("🔙 Back to Main Menu", callback_data="cmd:main_menu")
+            ])
+            await query.edit_message_text(formatted_text, parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
         elif "module:" in query.data:
             module_id = int(query.data.split("module:")[1])
             module = next(m for m in TRAINING_MODULES if m["id"] == module_id)
@@ -609,6 +667,20 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except telegram.error.BadRequest as e:
         print(f"Query error: {str(e)}")
         await query.message.reply_text("Sorry, that button timed out. Please try again!")
+
+async def all_resources(update: Update, context: ContextTypes.DEFAULT_TYPE, lang):
+    query = update.callback_query
+    links = []
+    for training in PAST_TRAININGS:
+        if training.get("video"):
+            links.append(f"*{training['name']}* Video: {training['video']}")
+        if training.get("resources"):
+            links.append(f"*{training['name']}* Resource: {training['resources']}")
+    await query.message.reply_text(
+        "📦 *All Resources* 📦\n" + "\n".join(links),
+        parse_mode="Markdown",
+        disable_web_page_preview=True
+    )
 
 def schedule_notifications(app):
     for training in UPCOMING_TRAININGS:
