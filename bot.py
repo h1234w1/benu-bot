@@ -8,8 +8,6 @@ import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 import telegram.error
-import asyncio
-import httpx
 
 # Google Sheets setup
 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
@@ -21,8 +19,9 @@ sheet = client.open("BenuBotData")
 training_sheet = sheet.worksheet("TrainingSignups")
 network_sheet = sheet.worksheet("NetworkingRegistrations")
 
-# Scheduler for notifications and uptime
+# Scheduler for notifications
 scheduler = AsyncIOScheduler()
+scheduler.start()
 
 # Manager’s Telegram ID
 MANAGER_CHAT_ID = "499281665"
@@ -229,7 +228,7 @@ async def handle_ask(update: Update, context: ContextTypes.DEFAULT_TYPE):
             payload = {
                 "inputs": f"You are a helpful AI for startup founders. {question}",
                 "parameters": {
-                    "max_new_tokens": 100,
+                    "max_new_tokens": 100,  # Reduced for speed
                     "temperature": 0.7,
                     "return_full_text": False
                 }
@@ -485,7 +484,7 @@ async def handle_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
-    await query.answer()
+    await query.answer()  # Acknowledge immediately to avoid timeout
     lang = context.user_data.get("lang", "en")
     print(f"Button clicked: {query.data}")
 
@@ -582,47 +581,22 @@ async def notify_training(app, name, date):
         chat_id = row["ChatID"]
         await app.bot.send_message(chat_id, f"Reminder: {name} training on {date} is in 7 days! Reply /training_events for details.")
 
-async def keep_alive(app):
-    print("Keeping Render awake...")
-    async with httpx.AsyncClient() as client:
-        try:
-            await client.get("https://benu-startup-bot.onrender.com/")
-            print("Ping successful.")
-        except Exception as e:
-            print(f"Ping failed: {str(e)}")
-
-# Application setup with polling
-application = Application.builder().token("7910442120:AAFMUhnwTONoyF1xilwRpjWIRCTmGa0den4").build()
-
-# Add handlers
-application.add_handler(CommandHandler("start", start))
-application.add_handler(CommandHandler("signup", signup))
-application.add_handler(CommandHandler("register", register))
-application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_reply))
-application.add_handler(CallbackQueryHandler(button))
-
-async def main():
-    await application.initialize()
-    schedule_notifications(application)
-    scheduler.add_job(keep_alive, "interval", minutes=10, args=[application])  # Still pings to keep Render awake
-    scheduler.start()
-    await application.start()
-    await application.updater.start_polling()
-    try:
-        await asyncio.Event().wait()  # Run forever until interrupted
-    except asyncio.CancelledError:
-        print("Shutting down gracefully...")
-    finally:
-        scheduler.shutdown()
-        await application.updater.stop()
-        await application.stop()
-        print("Bot has stopped.")
+def main():
+    app = Application.builder().token("7910442120:AAFMUhnwTONoyF1xilwRpjWIRCTmGa0den4").build()
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("signup", signup))
+    app.add_handler(CommandHandler("register", register))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_reply))
+    app.add_handler(CallbackQueryHandler(button))
+    schedule_notifications(app)
+    port = int(os.environ.get("PORT", 8443))
+    app.run_webhook(
+        listen="0.0.0.0",
+        port=port,
+        url_path="/",
+        webhook_url=f"https://{os.environ['RENDER_EXTERNAL_HOSTNAME']}/"
+    )
+    print("Bot is running on Render...")
 
 if __name__ == "__main__":
-    loop = asyncio.get_event_loop()
-    try:
-        loop.run_until_complete(main())
-    except KeyboardInterrupt:
-        loop.run_until_complete(asyncio.gather(*asyncio.all_tasks(loop)))
-    finally:
-        loop.close()
+    main()
