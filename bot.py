@@ -30,7 +30,7 @@ if not users_sheet.row_values(1):
 scheduler = AsyncIOScheduler()
 scheduler.start()
 
-# Manager’s Telegram ID (your ID, flexible to change)
+# Manager’s Telegram ID (your personal ID, flexible to change)
 MANAGER_CHAT_ID = "499281665"  # Replace with new manager ID here if needed
 
 # Training data
@@ -66,7 +66,7 @@ MESSAGES = {
         "signup_thanks": "Thank you for registering, {name}! Please wait for approval from our team. We’ll notify you soon.",
         "pending_message": "Your registration is pending approval. Please wait for confirmation.",
         "denied_message": "Your registration was denied. Contact benu@example.com for assistance.",
-        "approved_message": "Welcome! Your registration is approved. Use /start to explore resources and training!",
+        "approved_message": "Welcome! Your registration is approved. Use /menu to explore resources and training!",
         "resources_title": "Available Training Resources:",
         "no_resources": "No resources available yet.",
         "trainings_past": "Past Training Events:",
@@ -87,14 +87,14 @@ MESSAGES = {
         "description_prompt": "የኩባንያዎ መግለጫ ያስገቡ (ለምሳሌ፡ ለአካባቢው ገበያ የተጠናከረ ቢስኩት እንሰራለን):",
         "signup_thanks": "ለመመዝገብዎ እናመሰግናለን፣ {name}! እባክዎ ከቡድናችን ማረጋገጫ ይጠብቁ። በቅርቡ ይነገርዎታል።",
         "pending_message": "መመዝገቢያዎ ለማረጋገጫ በመጠባበቅ ላይ ነው። እባክዎ ይጠብቁ።",
-        "denied_message": "መመዝገቢያዎ ተከልክሏል። ለድጋፍ benu@example.com ያግኙ።",
-        "approved_message": "እንኳን ደህና መጡ! መመዝገቢያዎ ተቀባይነት አግኝቷል። መሣሪያዎችንና ሥልጠናዎችን ለመዳሰስ /start ይጠቀሙ!",
+        "denied_message": "መመዝገቢዤዎ ተከልክሏል። ለድጋፍ benu@example.com ያግኙ።",
+        "approved_message": "እንኳን ደህና መጡ! መመዝገቢያዎ ተቀባይነት አግኝቷል። መሣሪያዎችንና ሥልጠናዎችን ለመዳሰስ /menu ይጠቀሙ!",
         "resources_title": "የሚገኙ ሥልጠና መሣሪያዎች:",
-        "no_resources": "እስካሁን መሣሪያዎች የሉም።",
+        "no_resources": "እስካሁን መሣሪዤዎች የሉም።",
         "trainings_past": "ያለፉ ሥልጠና ዝግጅቶች:",
         "trainings_upcoming": "መጪ ሥልጠና ዝግጅቶች:",
         "training_signup_success": "{training} ለመማር ተመዝግበዋል!",
-        "news_title": "የቅርብ ጊዜ ማስታወቂያዎች:",
+        "news_title": "የቅርብ ጊዜ ማስታወቂዤዎች:",
         "subscribed": "ለዜና ዝመናዎች ተመዝግበዋል!",
         "contact_info": "ያግኙን:\nኢሜል: benu@example.com\nስልክ: +251921756683\nአድራሻ: አዲስ አበባ",
     }
@@ -147,8 +147,23 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             parse_mode="Markdown"
         )
 
+async def menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    chat_id = update.message.chat_id
+    username = update.message.from_user.username
+    status = get_user_status(username) if username else None
+    lang = context.user_data.get("lang", "en")
+    messages = MESSAGES[lang]
+
+    if status == "Approved":
+        await show_options_menu(update, context, lang)
+    elif status == "Denied":
+        await update.message.reply_text(f"🌟 *{messages['denied_message']}* 🌟", parse_mode="Markdown")
+    elif status == "Pending":
+        await update.message.reply_text(f"🌟 *{messages['pending_message']}* 🌟", parse_mode="Markdown")
+    else:
+        await update.message.reply_text("🌟 *Please register first using /start.* 🌟", parse_mode="Markdown")
+
 async def show_options(update: Update, context: ContextTypes.DEFAULT_TYPE, lang):
-    context.user_data["lang"] = lang
     messages = MESSAGES[lang]
     keyboard = [
         [InlineKeyboardButton(messages["ask"], callback_data="cmd:ask"),
@@ -162,6 +177,25 @@ async def show_options(update: Update, context: ContextTypes.DEFAULT_TYPE, lang)
         [InlineKeyboardButton(messages["update_profile"], callback_data="cmd:update_profile")]
     ]
     await update.callback_query.edit_message_text(
+        f"🌟 *{messages['options']}* 🌟",
+        reply_markup=InlineKeyboardMarkup(keyboard),
+        parse_mode="Markdown"
+    )
+
+async def show_options_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, lang):
+    messages = MESSAGES[lang]
+    keyboard = [
+        [InlineKeyboardButton(messages["ask"], callback_data="cmd:ask"),
+         InlineKeyboardButton(messages["resources"], callback_data="cmd:resources")],
+        [InlineKeyboardButton(messages["training_events"], callback_data="cmd:training_events"),
+         InlineKeyboardButton(messages["networking"], callback_data="cmd:networking")],
+        [InlineKeyboardButton(messages["news"], callback_data="cmd:news"),
+         InlineKeyboardButton(messages["contact"], callback_data="cmd:contact")],
+        [InlineKeyboardButton(messages["subscribenews"], callback_data="cmd:subscribenews"),
+         InlineKeyboardButton(messages["learn_startup_skills"], callback_data="cmd:learn_startup_skills")],
+        [InlineKeyboardButton(messages["update_profile"], callback_data="cmd:update_profile")]
+    ]
+    await update.message.reply_text(
         f"🌟 *{messages['options']}* 🌟",
         reply_markup=InlineKeyboardMarkup(keyboard),
         parse_mode="Markdown"
@@ -308,6 +342,7 @@ async def handle_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 [InlineKeyboardButton("Approve", callback_data=f"approve:{data[0]}"),
                  InlineKeyboardButton("Deny", callback_data=f"deny:{data[0]}")]
             ]
+            # Send to your personal chat, not the bot
             await context.bot.send_message(MANAGER_CHAT_ID, manager_text, reply_markup=InlineKeyboardMarkup(keyboard))
             del context.user_data["register_step"]
 
@@ -373,6 +408,7 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
 def main():
     app = Application.builder().token("7910442120:AAFMUhnwTONoyF1xilwRpjWIRCTmGa0den4").build()
     app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("menu", menu))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_reply))
     app.add_handler(CallbackQueryHandler(button))
     port = int(os.environ.get("PORT", 8443))
