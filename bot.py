@@ -24,14 +24,14 @@ network_sheet = sheet.worksheet("NetworkingRegistrations")
 
 # Set up Users sheet headers if new
 if not users_sheet.row_values(1):
-    users_sheet.update("A1:H1", [["ChatID", "Name", "Phone", "Email", "Company", "Description", "Timestamp", "Status"]])
+    users_sheet.update("A1:I1", [["Username", "Name", "Phone", "Email", "Company", "Description", "ChatID", "Timestamp", "Status"]])
 
 # Scheduler for notifications
 scheduler = AsyncIOScheduler()
 scheduler.start()
 
-# Manager’s Telegram ID
-MANAGER_CHAT_ID = "499281665"
+# Manager’s Telegram ID (your ID, flexible to change)
+MANAGER_CHAT_ID = "499281665"  # Replace with new manager ID here if needed
 
 # Training data
 UPCOMING_TRAININGS = [
@@ -46,7 +46,7 @@ PAST_TRAININGS = [
 # Language-specific messages
 MESSAGES = {
     "en": {
-        "welcome": "Welcome to Benu’s Startup Support Bot!\nSelect your language to register:",
+        "welcome": "Welcome to Benu’s Startup Support Bot!\nTo access our resources and training for startups, please register first. Select your language:\n\nእንኳን ወደ ቤኑ ስታርትአፕ ድጋፍ ቦት በደህና መጡ!\nለመመዝገብ እባክዎ ቋንቋዎን ይምረጡ:",
         "options": "Choose an option:",
         "ask": "Ask a question",
         "resources": "Access training resources",
@@ -57,15 +57,16 @@ MESSAGES = {
         "subscribenews": "News updates",
         "learn_startup_skills": "Learn Startup Skills",
         "update_profile": "Update Profile",
-        "signup_prompt": "Please provide your full name:",
-        "phone_prompt": "Please provide your phone number:",
-        "email_prompt": "Please provide your email:",
-        "company_prompt": "Please provide your company name:",
-        "description_prompt": "Please describe what your company does:",
-        "signup_thanks": "Thanks for registering, {name}! Awaiting approval.",
-        "pending_message": "Your registration is pending approval. Please wait.",
-        "denied_message": "Your registration was denied. Contact benu@example.com.",
-        "approved_message": "Welcome! Your registration is approved. Use /start.",
+        "username_prompt": "Please provide your Telegram username (e.g., @JohnDoe):",
+        "signup_prompt": "Please provide your full name (e.g., John Doe):",
+        "phone_prompt": "Please provide your phone number (e.g., +251912345678):",
+        "email_prompt": "Please provide your email (e.g., john.doe@example.com):",
+        "company_prompt": "Please provide your company name (e.g., Doe Biscuits):",
+        "description_prompt": "Please describe what your company does (e.g., We produce fortified biscuits for local markets):",
+        "signup_thanks": "Thanks for registering, {name}! Your details have been submitted for approval. You’ll be notified soon.",
+        "pending_message": "Your registration is pending approval. Please wait for confirmation.",
+        "denied_message": "Your registration was denied. Contact benu@example.com for assistance.",
+        "approved_message": "Welcome! Your registration is approved. Use /start to explore resources and training!",
         "resources_title": "Available Training Resources:",
         "no_resources": "No resources available yet.",
         "trainings_past": "Past Training Events:",
@@ -76,17 +77,18 @@ MESSAGES = {
         "contact_info": "Contact Us:\nEmail: benu@example.com\nPhone: +251921756683\nAddress: Addis Ababa",
     },
     "am": {
-        "welcome": "እንኳን ወደ ቤኑ ስታርትአፕ ድጋፍ ቦት በደህና መጡ!\nለመመዝገብ ቋንቋዎን ይምረጡ:",
+        "welcome": "እንኳን ወደ ቤኑ ስታርትአፕ ድጋፍ ቦት በደህና መጡ!\nለስታርትአፕ ሥልጠናዎችና መሣሪያዎች መድረስ መጀመሪያ መመዝገብ ይኖርብዎታል። ቋንቋዎን ይምረጡ:\n\nWelcome to Benu’s Startup Support Bot!\nTo access our resources and training for startups, please register first. Select your language:",
         "options": "አማራጭ ይምረጡ:",
-        "signup_prompt": "ሙሉ ስምዎን ያስፈልጋል:",
-        "phone_prompt": "ስልክ ቁጥርዎን ያስፈልጋል:",
-        "email_prompt": "ኢሜልዎን ያስፈልጋል:",
-        "company_prompt": "የኩባንያዎን ስም ያስፈልጋል:",
-        "description_prompt": "የኩባንያዎ መግለጫ ያስፈልጋል:",
-        "signup_thanks": "ለመመዝገብዎ እናመሰግናለን፣ {name}! ማረጋገጫ በመጠባበቅ ላይ።",
-        "pending_message": "መመዝገቢያዎ ለማረጋገጫ በመጠባበቅ ላይ ነው።",
-        "denied_message": "መመዝገቢያዎ ተከልክሏል። benu@example.com ያግኙ።",
-        "approved_message": "እንኳን ደህና መጡ! መመዝገቢያዎ ተቀባይነት አግኝቷል። /start ይጠቀሙ።",
+        "username_prompt": "የቴሌግራም ተጠቃሚ ስምዎን ያስፈልጋል (ለምሳሌ፡ @JohnDoe):",
+        "signup_prompt": "ሙሉ ስምዎን ያስፈልጋል (ለምሳሌ፡ ጆን ዶኤ):",
+        "phone_prompt": "ስልክ ቁጥርዎን ያስፈልጋል (ለምሳሌ፡ +251912345678):",
+        "email_prompt": "ኢሜልዎን ያስፈልጋል (ለምሳሌ፡ john.doe@example.com):",
+        "company_prompt": "የኩባንያዎን ስም ያስፈልጋል (ለምሳሌ፡ ዶኤ ቢስኩትስ):",
+        "description_prompt": "የኩባንያዎ መግለጫ ያስፈልጋል (ለምሳሌ፡ ለአካባቢው ገበያ የተጠናከረ ቢስኩት እንሰራለን):",
+        "signup_thanks": "ለመመዝገብዎ እናመሰግናለን፣ {name}! መረጃዎ ለማረጋገጫ ተልኳል። በቅርቡ ይነገርዎታል።",
+        "pending_message": "መመዝገቢያዎ ለማረጋገጫ በመጠባበቅ ላይ ነው። እባክዎ ይጠብቁ።",
+        "denied_message": "መመዝገቢያዎ ተከልክሏል። ለድጋፍ benu@example.com ያግኙ።",
+        "approved_message": "እንኳን ደህና መጡ! መመዝገቢያዎ ተቀባይነት አግኝቷል። መሣሪያዎችንና ሥልጠናዎችን ለመዳሰስ /start ይጠቀሙ!",
         "resources_title": "የሚገኙ ሥልጠና መሣሪያዎች:",
         "no_resources": "እስካሁን መሣሪያዎች የሉም።",
         "trainings_past": "ያለፉ ሥልጠና ዝግጅቶች:",
@@ -98,31 +100,33 @@ MESSAGES = {
     }
 }
 
-# Helper function to check user status
-def get_user_status(chat_id):
+# Helper function to check user status by username
+def get_user_status(username):
     try:
-        cell = users_sheet.find(str(chat_id))
+        cell = users_sheet.find(username)
         if cell:
             row = users_sheet.row_values(cell.row)
-            return row[7] if len(row) > 7 else "Pending"  # Status in column H (index 7)
+            return row[8] if len(row) > 8 else "Pending"  # Status in column I (index 8)
         return None
     except gspread.exceptions.CellNotFound:
         return None
 
-# Get user info
-def get_user_info(chat_id):
+# Get user info by username
+def get_user_info(username):
     try:
-        cell = users_sheet.find(str(chat_id))
+        cell = users_sheet.find(username)
         if cell:
             row = users_sheet.row_values(cell.row)
-            return {"name": row[1], "phone": row[2], "email": row[3], "company": row[4], "description": row[5]}
+            return {"name": row[1], "phone": row[2], "email": row[3], "company": row[4], "description": row[5], "chat_id": row[6]}
         return None
     except gspread.exceptions.CellNotFound:
         return None
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.message.chat_id
-    status = get_user_status(chat_id)
+    username = update.message.from_user.username
+    context.user_data["chat_id"] = chat_id  # Store chat_id for later use
+    status = get_user_status(username) if username else None
     lang = context.user_data.get("lang", "en")
     messages = MESSAGES[lang]
 
@@ -166,13 +170,16 @@ async def show_options(update: Update, context: ContextTypes.DEFAULT_TYPE, lang)
 async def register_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.message.chat_id
     lang = context.user_data.get("lang", "en")
-    context.user_data["register_step"] = "name"
-    keyboard = [[InlineKeyboardButton("Cancel", callback_data="cmd:cancel")]]
-    await update.message.reply_text(
-        f"🌟 *{MESSAGES[lang]['signup_prompt']}* 🌟",
-        parse_mode="Markdown",
-        reply_markup=InlineKeyboardMarkup(keyboard)
+    messages = MESSAGES[lang]
+    context.user_data["register_step"] = "username"
+    intro_text = (
+        f"🌟 *Register for Benu’s Startup Support Bot* 🌟\n\n"
+        f"We need some details to grant you access to our exclusive startup resources and training programs.\n"
+        f"You’ll provide your Telegram username, name, phone, email, company name, and a brief description.\n\n"
+        f"{messages['username_prompt']}"
     )
+    keyboard = [[InlineKeyboardButton("Cancel", callback_data="cmd:cancel")]]
+    await update.message.reply_text(intro_text, parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
 
 async def resources(update: Update, context: ContextTypes.DEFAULT_TYPE):
     lang = context.user_data.get("lang", "en")
@@ -239,22 +246,27 @@ async def contact(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await query.message.reply_text(text, parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
 
 async def subscribenews(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    chat_id = update.callback_query.message.chat_id
+    username = update.callback_query.from_user.username
     lang = context.user_data.get("lang", "en")
     query = update.callback_query
     messages = MESSAGES[lang]
-    if training_sheet.find(str(chat_id)) is None:  # Using TrainingSignups for subscriptions too
-        user_info = get_user_info(chat_id)
-        training_sheet.append_row([str(chat_id), user_info["name"], "Subscribed to News", datetime.now().isoformat()])
+    if training_sheet.find(username) is None:  # Check if already subscribed
+        user_info = get_user_info(username)
+        training_sheet.append_row([username, user_info["name"], "Subscribed to News", datetime.now().isoformat()])
     keyboard = [[InlineKeyboardButton("🔙 Back to Main Menu", callback_data="cmd:main_menu")]]
     await query.message.reply_text(f"🌟 *{messages['subscribed']}* 🌟", parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
 
 async def handle_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.message.chat_id
+    username = update.message.from_user.username
     text = update.message.text
     lang = context.user_data.get("lang", "en")
     messages = MESSAGES[lang]
-    status = get_user_status(chat_id)
+    status = get_user_status(username) if username else None
+
+    if not username and "register_step" not in context.user_data:
+        await update.message.reply_text("🌟 *Please set a Telegram username in your profile to use this bot.* 🌟", parse_mode="Markdown")
+        return
 
     if status != "Approved" and "register_step" not in context.user_data:
         await update.message.reply_text(f"🌟 *{messages['pending_message' if status == 'Pending' else 'denied_message']}* 🌟", parse_mode="Markdown")
@@ -264,7 +276,13 @@ async def handle_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
         step = context.user_data["register_step"]
         keyboard = [[InlineKeyboardButton("Cancel", callback_data="cmd:cancel")]]
         reply_markup = InlineKeyboardMarkup(keyboard)
-        if step == "name":
+        if step == "username":
+            if not text.startswith("@"):
+                text = f"@{text}"
+            context.user_data["username"] = text
+            context.user_data["register_step"] = "name"
+            await update.message.reply_text(f"🌟 *{messages['signup_prompt']}* 🌟", parse_mode="Markdown", reply_markup=reply_markup)
+        elif step == "name":
             context.user_data["name"] = text
             context.user_data["register_step"] = "phone"
             await update.message.reply_text(f"🌟 *{messages['phone_prompt']}* 🌟", parse_mode="Markdown", reply_markup=reply_markup)
@@ -282,17 +300,17 @@ async def handle_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text(f"🌟 *{messages['description_prompt']}* 🌟", parse_mode="Markdown", reply_markup=reply_markup)
         elif step == "description":
             context.user_data["description"] = text
-            data = [str(chat_id), context.user_data["name"], context.user_data["phone"],
-                    context.user_data["email"], context.user_data["company"], text, datetime.now().isoformat(), "Pending"]
+            data = [context.user_data["username"], context.user_data["name"], context.user_data["phone"],
+                    context.user_data["email"], context.user_data["company"], text, str(chat_id), datetime.now().isoformat(), "Pending"]
             users_sheet.append_row(data)
             await update.message.reply_text(f"🌟 *{messages['signup_thanks'].format(name=data[1])}* 🌟", parse_mode="Markdown")
             manager_text = (
                 f"New Registration Request:\n"
-                f"Name: {data[1]}\nPhone: {data[2]}\nEmail: {data[3]}\nCompany: {data[4]}\nDescription: {data[5]}\nChat ID: {data[0]}"
+                f"Username: {data[0]}\nName: {data[1]}\nPhone: {data[2]}\nEmail: {data[3]}\nCompany: {data[4]}\nDescription: {data[5]}\nChat ID: {data[6]}"
             )
             keyboard = [
-                [InlineKeyboardButton("Approve", callback_data=f"approve:{chat_id}"),
-                 InlineKeyboardButton("Deny", callback_data=f"deny:{chat_id}")]
+                [InlineKeyboardButton("Approve", callback_data=f"approve:{data[0]}"),
+                 InlineKeyboardButton("Deny", callback_data=f"deny:{data[0]}")]
             ]
             await context.bot.send_message(MANAGER_CHAT_ID, manager_text, reply_markup=InlineKeyboardMarkup(keyboard))
             del context.user_data["register_step"]
@@ -300,10 +318,14 @@ async def handle_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
-    chat_id = query.message.chat_id
+    username = query.from_user.username
     lang = context.user_data.get("lang", "en")
     messages = MESSAGES[lang]
-    status = get_user_status(chat_id)
+    status = get_user_status(username) if username else None
+
+    if not username and "lang:" not in query.data and "approve:" not in query.data and "deny:" not in query.data:
+        await query.edit_message_text("🌟 *Please set a Telegram username in your profile to use this bot.* 🌟", parse_mode="Markdown")
+        return
 
     if status != "Approved" and "lang:" not in query.data and "approve:" not in query.data and "deny:" not in query.data:
         await query.edit_message_text(f"🌟 *{messages['pending_message' if status == 'Pending' else 'denied_message']}* 🌟", parse_mode="Markdown")
@@ -315,19 +337,21 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.edit_message_text(f"🌟 *Starting registration in {lang_choice}...* 🌟", parse_mode="Markdown")
         await register_user(update, context)
     elif "approve:" in query.data:
-        user_chat_id = query.data.split("approve:")[1]
-        cell = users_sheet.find(user_chat_id)
+        username = query.data.split("approve:")[1]
+        cell = users_sheet.find(username)
         if cell:
-            users_sheet.update_cell(cell.row, 8, "Approved")
-            await context.bot.send_message(user_chat_id, f"🌟 *{MESSAGES[lang]['approved_message']}* 🌟", parse_mode="Markdown")
-            await query.edit_message_text(f"User {user_chat_id} approved!", parse_mode="Markdown")
+            users_sheet.update_cell(cell.row, 9, "Approved")  # Status in column I (index 8)
+            user_info = get_user_info(username)
+            await context.bot.send_message(user_info["chat_id"], f"🌟 *{MESSAGES[lang]['approved_message']}* 🌟", parse_mode="Markdown")
+            await query.edit_message_text(f"User {username} approved!", parse_mode="Markdown")
     elif "deny:" in query.data:
-        user_chat_id = query.data.split("deny:")[1]
-        cell = users_sheet.find(user_chat_id)
+        username = query.data.split("deny:")[1]
+        cell = users_sheet.find(username)
         if cell:
-            users_sheet.update_cell(cell.row, 8, "Denied")
-            await context.bot.send_message(user_chat_id, f"🌟 *{MESSAGES[lang]['denied_message']}* 🌟", parse_mode="Markdown")
-            await query.edit_message_text(f"User {user_chat_id} denied!", parse_mode="Markdown")
+            users_sheet.update_cell(cell.row, 9, "Denied")
+            user_info = get_user_info(username)
+            await context.bot.send_message(user_info["chat_id"], f"🌟 *{MESSAGES[lang]['denied_message']}* 🌟", parse_mode="Markdown")
+            await query.edit_message_text(f"User {username} denied!", parse_mode="Markdown")
     elif "cmd:" in query.data:
         cmd = query.data.split("cmd:")[1]
         handlers = {
@@ -346,8 +370,8 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 del context.user_data["register_step"]
     elif "signup_training:" in query.data:
         training_name = query.data.split("signup_training:")[1]
-        user_info = get_user_info(chat_id)
-        training_sheet.append_row([str(chat_id), user_info["name"], training_name, datetime.now().isoformat()])
+        user_info = get_user_info(username)
+        training_sheet.append_row([username, user_info["name"], training_name, datetime.now().isoformat()])
         keyboard = [[InlineKeyboardButton("🔙 Back to Main Menu", callback_data="cmd:main_menu")]]
         await query.message.reply_text(f"🌟 *{messages['training_signup_success'].format(training=training_name)}* 🌟", parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
 
