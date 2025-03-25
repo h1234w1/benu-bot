@@ -30,8 +30,8 @@ if not users_sheet.row_values(1):
 scheduler = AsyncIOScheduler()
 scheduler.start()
 
-# Manager’s Telegram ID (your personal ID, flexible to change)
-MANAGER_CHAT_ID = "499281665"  # Replace with new manager ID here if needed
+# Manager’s Telegram ID (your personal ID)
+MANAGER_CHAT_ID = "499281665"  # Your personal Telegram ID for approval requests
 
 # Training data
 UPCOMING_TRAININGS = [
@@ -87,7 +87,7 @@ MESSAGES = {
         "description_prompt": "የኩባንያዎ መግለጫ ያስገቡ (ለምሳሌ፡ ለአካባቢው ገበያ የተጠናከረ ቢስኩት እንሰራለን):",
         "signup_thanks": "ለመመዝገብዎ እናመሰግናለን፣ {name}! እባክዎ ከቡድናችን ማረጋገጫ ይጠብቁ። በቅርቡ ይነገርዎታል።",
         "pending_message": "መመዝገቢያዎ ለማረጋገጫ በመጠባበቅ ላይ ነው። እባክዎ ይጠብቁ።",
-        "denied_message": "መመዝገቢዤዎ ተከልክሏል። ለድጋፍ benu@example.com ያግኙ።",
+        "denied_message": "መመዝገቢያዎ ተከልክሏል። ለድጋፍ benu@example.com ያግኙ።",
         "approved_message": "እንኳን ደህና መጡ! መመዝገቢያዎ ተቀባይነት አግኝቷል። መሣሪያዎችንና ሥልጠናዎችን ለመዳሰስ /menu ይጠቀሙ!",
         "resources_title": "የሚገኙ ሥልጠና መሣሪያዎች:",
         "no_resources": "እስካሁን መሣሪዤዎች የሉም።",
@@ -131,7 +131,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     messages = MESSAGES[lang]
 
     if status == "Approved":
-        await show_options(update, context, lang)
+        await show_options_menu(update, context, lang)
     elif status == "Denied":
         await update.message.reply_text(f"🌟 *{messages['denied_message']}* 🌟", parse_mode="Markdown")
     elif status == "Pending":
@@ -150,6 +150,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.message.chat_id
     username = update.message.from_user.username
+    context.user_data["chat_id"] = chat_id
     status = get_user_status(username) if username else None
     lang = context.user_data.get("lang", "en")
     messages = MESSAGES[lang]
@@ -163,26 +164,8 @@ async def menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     else:
         await update.message.reply_text("🌟 *Please register first using /start.* 🌟", parse_mode="Markdown")
 
-async def show_options(update: Update, context: ContextTypes.DEFAULT_TYPE, lang):
-    messages = MESSAGES[lang]
-    keyboard = [
-        [InlineKeyboardButton(messages["ask"], callback_data="cmd:ask"),
-         InlineKeyboardButton(messages["resources"], callback_data="cmd:resources")],
-        [InlineKeyboardButton(messages["training_events"], callback_data="cmd:training_events"),
-         InlineKeyboardButton(messages["networking"], callback_data="cmd:networking")],
-        [InlineKeyboardButton(messages["news"], callback_data="cmd:news"),
-         InlineKeyboardButton(messages["contact"], callback_data="cmd:contact")],
-        [InlineKeyboardButton(messages["subscribenews"], callback_data="cmd:subscribenews"),
-         InlineKeyboardButton(messages["learn_startup_skills"], callback_data="cmd:learn_startup_skills")],
-        [InlineKeyboardButton(messages["update_profile"], callback_data="cmd:update_profile")]
-    ]
-    await update.callback_query.edit_message_text(
-        f"🌟 *{messages['options']}* 🌟",
-        reply_markup=InlineKeyboardMarkup(keyboard),
-        parse_mode="Markdown"
-    )
-
 async def show_options_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, lang):
+    context.user_data["lang"] = lang
     messages = MESSAGES[lang]
     keyboard = [
         [InlineKeyboardButton(messages["ask"], callback_data="cmd:ask"),
@@ -195,11 +178,18 @@ async def show_options_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, 
          InlineKeyboardButton(messages["learn_startup_skills"], callback_data="cmd:learn_startup_skills")],
         [InlineKeyboardButton(messages["update_profile"], callback_data="cmd:update_profile")]
     ]
-    await update.message.reply_text(
-        f"🌟 *{messages['options']}* 🌟",
-        reply_markup=InlineKeyboardMarkup(keyboard),
-        parse_mode="Markdown"
-    )
+    if hasattr(update, 'callback_query'):
+        await update.callback_query.edit_message_text(
+            f"🌟 *{messages['options']}* 🌟",
+            reply_markup=InlineKeyboardMarkup(keyboard),
+            parse_mode="Markdown"
+        )
+    else:
+        await update.message.reply_text(
+            f"🌟 *{messages['options']}* 🌟",
+            reply_markup=InlineKeyboardMarkup(keyboard),
+            parse_mode="Markdown"
+        )
 
 async def register_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
     lang = context.user_data.get("lang", "en")
@@ -342,7 +332,7 @@ async def handle_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 [InlineKeyboardButton("Approve", callback_data=f"approve:{data[0]}"),
                  InlineKeyboardButton("Deny", callback_data=f"deny:{data[0]}")]
             ]
-            # Send to your personal chat, not the bot
+            # Send to your personal chat (499281665)
             await context.bot.send_message(MANAGER_CHAT_ID, manager_text, reply_markup=InlineKeyboardMarkup(keyboard))
             del context.user_data["register_step"]
 
@@ -386,7 +376,7 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
         cmd = query.data.split("cmd:")[1]
         handlers = {
             "cancel": lambda u, c: query.edit_message_text(f"🌟 *Registration cancelled.* 🌟", parse_mode="Markdown"),
-            "main_menu": lambda u, c: show_options(u, c, lang),
+            "main_menu": lambda u, c: show_options_menu(u, c, lang),
             "resources": resources,
             "training_events": training_events,
             "training_signup": training_signup,
