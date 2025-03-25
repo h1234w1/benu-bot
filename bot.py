@@ -57,13 +57,13 @@ MESSAGES = {
         "subscribenews": "News updates",
         "learn_startup_skills": "Learn Startup Skills",
         "update_profile": "Update Profile",
-        "username_prompt": "Please provide your Telegram username (e.g., @JohnDoe):",
+        "username_prompt": "Please enter your Telegram username (e.g., @Beth):",
         "signup_prompt": "Please provide your full name (e.g., John Doe):",
         "phone_prompt": "Please provide your phone number (e.g., +251912345678):",
         "email_prompt": "Please provide your email (e.g., john.doe@example.com):",
         "company_prompt": "Please provide your company name (e.g., Doe Biscuits):",
         "description_prompt": "Please describe what your company does (e.g., We produce fortified biscuits for local markets):",
-        "signup_thanks": "Thanks for registering, {name}! Your details have been submitted for approval. You’ll be notified soon.",
+        "signup_thanks": "Thank you for registering, {name}! Please wait for approval from our team. We’ll notify you soon.",
         "pending_message": "Your registration is pending approval. Please wait for confirmation.",
         "denied_message": "Your registration was denied. Contact benu@example.com for assistance.",
         "approved_message": "Welcome! Your registration is approved. Use /start to explore resources and training!",
@@ -79,13 +79,13 @@ MESSAGES = {
     "am": {
         "welcome": "እንኳን ወደ ቤኑ ስታርትአፕ ድጋፍ ቦት በደህና መጡ!\nለስታርትአፕ ሥልጠናዎችና መሣሪያዎች መድረስ መጀመሪያ መመዝገብ ይኖርብዎታል። ቋንቋዎን ይምረጡ:\n\nWelcome to Benu’s Startup Support Bot!\nTo access our resources and training for startups, please register first. Select your language:",
         "options": "አማራጭ ይምረጡ:",
-        "username_prompt": "የቴሌግራም ተጠቃሚ ስምዎን ያስፈልጋል (ለምሳሌ፡ @JohnDoe):",
-        "signup_prompt": "ሙሉ ስምዎን ያስፈልጋል (ለምሳሌ፡ ጆን ዶኤ):",
-        "phone_prompt": "ስልክ ቁጥርዎን ያስፈልጋል (ለምሳሌ፡ +251912345678):",
-        "email_prompt": "ኢሜልዎን ያስፈልጋል (ለምሳሌ፡ john.doe@example.com):",
-        "company_prompt": "የኩባንያዎን ስም ያስፈልጋል (ለምሳሌ፡ ዶኤ ቢስኩትስ):",
-        "description_prompt": "የኩባንያዎ መግለጫ ያስፈልጋል (ለምሳሌ፡ ለአካባቢው ገበያ የተጠናከረ ቢስኩት እንሰራለን):",
-        "signup_thanks": "ለመመዝገብዎ እናመሰግናለን፣ {name}! መረጃዎ ለማረጋገጫ ተልኳል። በቅርቡ ይነገርዎታል።",
+        "username_prompt": "የቴሌግራም ተጠቃሚ ስምዎን ያስገቡ (ለምሳሌ፡ @Beth):",
+        "signup_prompt": "ሙሉ ስምዎን ያስገቡ (ለምሳሌ፡ ጆን ዶኤ):",
+        "phone_prompt": "ስልክ ቁጥርዎን ያስገቡ (ለምሳሌ፡ +251912345678):",
+        "email_prompt": "ኢሜልዎን ያስገቡ (ለምሳሌ፡ john.doe@example.com):",
+        "company_prompt": "የኩባንያዎን ስም ያስገቡ (ለምሳሌ፡ ዶኤ ቢስኩትስ):",
+        "description_prompt": "የኩባንያዎ መግለጫ ያስገቡ (ለምሳሌ፡ ለአካባቢው ገበያ የተጠናከረ ቢስኩት እንሰራለን):",
+        "signup_thanks": "ለመመዝገብዎ እናመሰግናለን፣ {name}! እባክዎ ከቡድናችን ማረጋገጫ ይጠብቁ። በቅርቡ ይነገርዎታል።",
         "pending_message": "መመዝገቢያዎ ለማረጋገጫ በመጠባበቅ ላይ ነው። እባክዎ ይጠብቁ።",
         "denied_message": "መመዝገቢያዎ ተከልክሏል። ለድጋፍ benu@example.com ያግኙ።",
         "approved_message": "እንኳን ደህና መጡ! መመዝገቢያዎ ተቀባይነት አግኝቷል። መሣሪያዎችንና ሥልጠናዎችን ለመዳሰስ /start ይጠቀሙ!",
@@ -168,18 +168,14 @@ async def show_options(update: Update, context: ContextTypes.DEFAULT_TYPE, lang)
     )
 
 async def register_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    chat_id = update.message.chat_id
     lang = context.user_data.get("lang", "en")
     messages = MESSAGES[lang]
     context.user_data["register_step"] = "username"
-    intro_text = (
-        f"🌟 *Register for Benu’s Startup Support Bot* 🌟\n\n"
-        f"We need some details to grant you access to our exclusive startup resources and training programs.\n"
-        f"You’ll provide your Telegram username, name, phone, email, company name, and a brief description.\n\n"
-        f"{messages['username_prompt']}"
+    await update.callback_query.message.reply_text(
+        f"🌟 *{messages['username_prompt']}* 🌟",
+        parse_mode="Markdown",
+        reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Cancel", callback_data="cmd:cancel")]])
     )
-    keyboard = [[InlineKeyboardButton("Cancel", callback_data="cmd:cancel")]]
-    await update.message.reply_text(intro_text, parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
 
 async def resources(update: Update, context: ContextTypes.DEFAULT_TYPE):
     lang = context.user_data.get("lang", "en")
@@ -334,8 +330,7 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if "lang:" in query.data:
         lang_choice = query.data.split("lang:")[1]
         context.user_data["lang"] = lang_choice
-        await query.edit_message_text(f"🌟 *Starting registration in {lang_choice}...* 🌟", parse_mode="Markdown")
-        await register_user(update, context)
+        await register_user(update, context)  # Start registration directly
     elif "approve:" in query.data:
         username = query.data.split("approve:")[1]
         cell = users_sheet.find(username)
