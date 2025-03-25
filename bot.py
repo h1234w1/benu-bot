@@ -84,7 +84,7 @@ MESSAGES = {
         "phone_prompt": "ስልክ ቁጥርዎን ያስገቡ (ለምሳሌ፡ +251912345678):",
         "email_prompt": "ኢሜልዎን ያስገቡ (ለምሳሌ፡ john.doe@example.com):",
         "company_prompt": "የኩባንያዎን ስም ያስገቡ (ለምሳሌ፡ ዶኤ ቢስኩትስ):",
-        "description_prompt": "የኩባንያዎ መግለጫ ያስገቡ (ለምሳሌ፡ ለአካባቢው ገበያ የተጠናከረ ቢስኩት እንሰራለን):",
+        "description_prompt": "የኩባንያዎ መግለጫ ያስገቡ (ለምሳሌ፡ ለአካባቢው ገበ�Ya የተጠናከረ ቢስኩት እንሰራለን):",
         "signup_thanks": "ለመመዝገብዎ እናመሰግናለን፣ {name}! እባክዎ ከቡድናችን ማረጋገጫ ይጠብቁ። በቅርቡ ይነገርዎታል።",
         "pending_message": "መመዝገቢያዎ ለማረጋገጫ በመጠባበቅ ላይ ነው። እባክዎ ይጠብቁ።",
         "denied_message": "መመዝገቢያዎ ተከልክሏል። ለድጋፍ benu@example.com ያግኙ።",
@@ -348,10 +348,6 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.edit_message_text("🌟 *Please set a Telegram username in your profile to use this bot.* 🌟", parse_mode="Markdown")
         return
 
-    if status != "Approved" and "lang:" not in query.data and "approve:" not in query.data and "deny:" not in query.data:
-        await query.edit_message_text(f"🌟 *{messages['pending_message' if status == 'Pending' else 'denied_message']}* 🌟", parse_mode="Markdown")
-        return
-
     if "lang:" in query.data:
         lang_choice = query.data.split("lang:")[1]
         context.user_data["lang"] = lang_choice
@@ -362,7 +358,28 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if cell:
             users_sheet.update_cell(cell.row, 9, "Approved")  # Status in column I (index 8)
             user_info = get_user_info(username)
-            await context.bot.send_message(user_info["chat_id"], f"🌟 *{MESSAGES[lang]['approved_message']}* 🌟", parse_mode="Markdown")
+            await context.bot.send_message(
+                user_info["chat_id"], 
+                f"🌟 *{MESSAGES[lang]['approved_message']}* 🌟",
+                parse_mode="Markdown"
+            )
+            # Optionally show the menu immediately after approval
+            await context.bot.send_message(
+                user_info["chat_id"],
+                f"🌟 *{MESSAGES[lang]['options']}* 🌟",
+                reply_markup=InlineKeyboardMarkup([
+                    [InlineKeyboardButton(messages["ask"], callback_data="cmd:ask"),
+                     InlineKeyboardButton(messages["resources"], callback_data="cmd:resources")],
+                    [InlineKeyboardButton(messages["training_events"], callback_data="cmd:training_events"),
+                     InlineKeyboardButton(messages["networking"], callback_data="cmd:networking")],
+                    [InlineKeyboardButton(messages["news"], callback_data="cmd:news"),
+                     InlineKeyboardButton(messages["contact"], callback_data="cmd:contact")],
+                    [InlineKeyboardButton(messages["subscribenews"], callback_data="cmd:subscribenews"),
+                     InlineKeyboardButton(messages["learn_startup_skills"], callback_data="cmd:learn_startup_skills")],
+                    [InlineKeyboardButton(messages["update_profile"], callback_data="cmd:update_profile")]
+                ]),
+                parse_mode="Markdown"
+            )
             await query.edit_message_text(f"User {username} approved!", parse_mode="Markdown")
     elif "deny:" in query.data:
         username = query.data.split("deny:")[1]
@@ -406,7 +423,7 @@ def main():
         listen="0.0.0.0",
         port=port,
         url_path="/",
-        webhook_url=f"https://{os.environ['RENDER_EXTERNAL_HOSTNAME']}/"
+        webhook_url=f"https://{os.environ.get('RENDER_EXTERNAL_HOSTNAME', 'benu-startup-bot.onrender.com')}/"
     )
     print("Bot is running on Render...")
 
