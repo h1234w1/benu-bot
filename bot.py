@@ -8,6 +8,7 @@ import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 import telegram.error
+import urllib.parse
 
 # Google Sheets setup
 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
@@ -16,11 +17,10 @@ creds_json = json.loads(creds_json_raw)
 creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_json, scope)
 client = gspread.authorize(creds)
 sheet = client.open("BenuBotData")
-users_sheet = sheet.worksheet("Users") if "Users" in [ws.title for ws in sheet.worksheets()] else sheet.add_worksheet(title="Users", rows=100, cols=10)
 training_sheet = sheet.worksheet("TrainingSignups")
 network_sheet = sheet.worksheet("NetworkingRegistrations")
-
-# Set up Users sheet headers if new
+# Add Users sheet if it doesn’t exist
+users_sheet = sheet.worksheet("Users") if "Users" in [ws.title for ws in sheet.worksheets()] else sheet.add_worksheet(title="Users", rows=100, cols=10)
 if not users_sheet.row_values(1):
     users_sheet.update("A1:I1", [["Username", "Name", "Phone", "Email", "Company", "Description", "ChatID", "Timestamp", "Status"]])
 
@@ -41,31 +41,61 @@ UPCOMING_TRAININGS = [
     {"name": "Marketing for Startups", "date": "2025-04-20", "resources": None},
 ]
 PAST_TRAININGS = [
-    {"name": "Intro to Fortification", "date": "2025-03-10", "video": "https://youtube.com/example", "resources": "https://drive.google.com/example", "description": "Learn the basics of fortifying biscuits with nutrients."},
-    {"name": "Biscuit Processing Techniques", "date": "2025-03-20", "video": "https://youtu.be/Q9TCM89oNfU?si=5Aia87X1csYSZ4g6", "resources": "https://drive.google.com/file/d/1HTr62gOcWHEU76-OXDnzJRf11l7nXKPv/view", "description": "Techniques for efficient biscuit production."},
+    {
+        "name": "Intro to Fortification",
+        "date": "2025-03-10",
+        "video": "https://youtube.com/example",
+        "resources": "https://drive.google.com/example",
+        "description": "Learn the basics of fortifying biscuits with nutrients."
+    },
+    {
+        "name": "Biscuit Processing Techniques",
+        "date": "2025-03-20",
+        "video": "https://youtu.be/Q9TCM89oNfU?si=5Aia87X1csYSZ4g6",
+        "resources": "https://drive.google.com/file/d/1HTr62gOcWHEU76-OXDnzJRf11l7nXKPv/view",
+        "description": "Techniques for efficient biscuit production."
+    },
 ]
 TRAINING_MODULES = [
-    {"id": 1, "name": "Biscuit Production Basics", "content": "Learn the essentials of biscuit production: ingredients, equipment, and quality control.", "prereq": [], "quiz": [
-        {"q": "What’s a key ingredient in biscuits?", "options": ["Sugar", "Salt", "Water"], "answer": "Sugar", "explain": "Sugar is key for flavor and texture in biscuits."},
-        {"q": "What equipment is vital for mixing?", "options": ["Oven", "Mixer", "Scale"], "answer": "Mixer", "explain": "A mixer ensures uniform dough consistency."},
-        {"q": "What ensures product consistency?", "options": ["Taste", "Quality Control", "Packaging"], "answer": "Quality Control", "explain": "Quality control checks standards at every step."}
-    ]},
-    {"id": 2, "name": "Marketing for Startups", "content": "Understand branding, target markets, and low-cost promotion strategies.", "prereq": [1], "quiz": [
-        {"q": "What defines your brand?", "options": ["Logo", "Values", "Price"], "answer": "Values", "explain": "Values shape your brand’s identity and customer trust."},
-        {"q": "Who is your target market?", "options": ["Everyone", "Specific Group", "Competitors"], "answer": "Specific Group", "explain": "A specific group helps tailor your marketing effectively."},
-        {"q": "What’s a low-cost promotion?", "options": ["TV Ads", "Social Media", "Billboards"], "answer": "Social Media", "explain": "Social media reaches wide audiences cheaply."}
-    ]},
-    {"id": 3, "name": "Financial Planning", "content": "Basics of budgeting, cash flow, and securing startup funds.", "prereq": [1, 2], "quiz": [
-        {"q": "What tracks income vs. expenses?", "options": ["Budget", "Loan", "Sales"], "answer": "Budget", "explain": "A budget plans your financial resources."},
-        {"q": "What’s key to cash flow?", "options": ["Profit", "Timing", "Debt"], "answer": "Timing", "explain": "Timing ensures money is available when needed."},
-        {"q": "Where can startups get funds?", "options": ["Friends", "Investors", "Savings"], "answer": "Investors", "explain": "Investors provide capital for growth."}
-    ]}
+    {
+        "id": 1,
+        "name": "Biscuit Production Basics",
+        "content": "Learn the essentials of biscuit production: ingredients, equipment, and quality control.",
+        "prereq": [],
+        "quiz": [
+            {"q": "What’s a key ingredient in biscuits?", "options": ["Sugar", "Salt", "Water"], "answer": "Sugar", "explain": "Sugar is key for flavor and texture in biscuits."},
+            {"q": "What equipment is vital for mixing?", "options": ["Oven", "Mixer", "Scale"], "answer": "Mixer", "explain": "A mixer ensures uniform dough consistency."},
+            {"q": "What ensures product consistency?", "options": ["Taste", "Quality Control", "Packaging"], "answer": "Quality Control", "explain": "Quality control checks standards at every step."}
+        ]
+    },
+    {
+        "id": 2,
+        "name": "Marketing for Startups",
+        "content": "Understand branding, target markets, and low-cost promotion strategies.",
+        "prereq": [1],
+        "quiz": [
+            {"q": "What defines your brand?", "options": ["Logo", "Values", "Price"], "answer": "Values", "explain": "Values shape your brand’s identity and customer trust."},
+            {"q": "Who is your target market?", "options": ["Everyone", "Specific Group", "Competitors"], "answer": "Specific Group", "explain": "A specific group helps tailor your marketing effectively."},
+            {"q": "What’s a low-cost promotion?", "options": ["TV Ads", "Social Media", "Billboards"], "answer": "Social Media", "explain": "Social media reaches wide audiences cheaply."}
+        ]
+    },
+    {
+        "id": 3,
+        "name": "Financial Planning",
+        "content": "Basics of budgeting, cash flow, and securing startup funds.",
+        "prereq": [1, 2],
+        "quiz": [
+            {"q": "What tracks income vs. expenses?", "options": ["Budget", "Loan", "Sales"], "answer": "Budget", "explain": "A budget plans your financial resources."},
+            {"q": "What’s key to cash flow?", "options": ["Profit", "Timing", "Debt"], "answer": "Timing", "explain": "Timing ensures money is available when needed."},
+            {"q": "Where can startups get funds?", "options": ["Friends", "Investors", "Savings"], "answer": "Investors", "explain": "Investors provide capital for growth."}
+        ]
+    }
 ]
 
 # Language-specific messages
 MESSAGES = {
     "en": {
-        "welcome": "Welcome to Benu’s Startup Support Bot!\nTo access our resources and training for startups, please register first. Select your language:",
+        "welcome": "Welcome to Benu’s Startup Support Bot!\nPlease select your language to register:",
         "options": "Choose an option:",
         "ask": "Ask a question",
         "resources": "Access training resources",
@@ -78,23 +108,23 @@ MESSAGES = {
         "update_profile": "Update Profile",
         "ask_prompt": "Please type your question, and I’ll get an answer for you!",
         "ask_error": "Sorry, I’m having trouble answering right now. Try again later!",
-        "signup_prompt": "Please provide your full name (e.g., John Doe):",
-        "pending_message": "Your registration is pending approval. Please wait for confirmation.",
-        "denied_message": "Your registration was denied. Contact benu@example.com for assistance.",
-        "approved_message": "Welcome! Your registration is approved. Use /menu to explore resources and training!",
         "resources_title": "Available Training Resources:",
         "no_resources": "No resources available yet.",
         "trainings_past": "Past Training Events:",
         "trainings_upcoming": "Upcoming Training Events:",
-        "signup_thanks": "Thank you for registering, {name}! Please wait for approval from our team. We’ll notify you soon.",
+        "signup_prompt": "Please provide your full name:",
+        "survey_company_size": "What’s your company size? (e.g., Small, Medium, Large):",
+        "networking_title": "Network by Category (Biscuit & Agriculture Sector):",
         "register_prompt": "Please provide your company name:",
         "news_title": "Latest Announcements:",
-        "contact_info": "Contact Us:\nEmail: benu@example.com\nPhone: +251921756683\nAddress: Addis Ababa",
+        "contact_info": "Contact Us:\nEmail: benu@example.com\nPhone: +251921756683\nAddress: Addis Ababa, Bole Sub city, Woreda 03, H.N. 4/10/A5/FL8",
         "subscribed": "Subscribed to news updates!",
-        "phone_prompt": "Please provide your phone number (e.g., +251912345678):",
-        "email_prompt": "Please provide your email (e.g., john.doe@example.com):",
-        "company_prompt": "Please provide your company name (e.g., Doe Biscuits):",
-        "description_prompt": "Please describe what your company does (e.g., We produce fortified biscuits):",
+        "signup_thanks": "Thanks for signing up, {name}! Your registration is pending approval.",
+        "register_thanks": "Registered {company} in the network!",
+        "phone_prompt": "Please provide your phone number:",
+        "email_prompt": "Please provide your email:",
+        "company_prompt": "Please provide your company name:",
+        "description_prompt": "Please provide a description of what your company does:",
         "manager_prompt": "Please provide the manager’s name:",
         "categories_prompt": "Select categories (click Done when finished):",
         "public_prompt": "Share email publicly? (Yes/No):",
@@ -113,9 +143,14 @@ MESSAGES = {
         "profile_email": "New email:",
         "profile_company": "New company:",
         "profile_updated": "Profile updated!",
+        "survey_satisfaction": "How satisfied are you with the training? (1-5):",
+        "survey_thanks": "Thank you for your feedback!",
+        "pending_message": "Your registration is pending approval. Please wait for confirmation.",
+        "denied_message": "Your registration was denied. Contact benu@example.com for assistance.",
+        "approved_message": "Welcome! Your registration is approved. Use /menu to explore resources and training!"
     },
     "am": {
-        "welcome": "እንኳን ወደ ቤኑ ስታርትአፕ ድጋፍ ቦት በደህና መጡ!\nለስታርትአፕ ሥልጠናዎችና መሣሪያዎች መድረስ መጀመሪያ መመዝገብ ይኖርብዎታል። ቋንቋዎን ይምረጡ:",
+        "welcome": "እንኳን ወደ ቤኑ ስታርትአፕ ድጋፍ ቦት በደህና መጡ!\nለመመዝገብ ቋንቋዎን ይምረጡ:",
         "options": "አማራጭ ይምረጡ:",
         "ask": "ጥያቄ ይጠይቁ",
         "resources": "ሥልጠና መሣሪያዎችን ይድረሱ",
@@ -128,24 +163,24 @@ MESSAGES = {
         "update_profile": "መገለጫ ያሻሽሉ",
         "ask_prompt": "እባክዎ ጥያቄዎን ይፃፉ፣ መልስ እፈልግልዎታለሁ!",
         "ask_error": "ይቅርታ፣ አሁን መልስ ለመስጠት ችግር አለብኝ። ቆይተው ይሞክሩ!",
-        "signup_prompt": "ሙሉ ስምዎን ያስገቡ (ለምሳሌ፡ ጆን ዶኤ):",
-        "pending_message": "መመዝገቢያዎ ለማረጋገጫ በመጠባበቅ ላይ ነው። እባክዎ ይጠብቁ።",
-        "denied_message": "መመዝገቢያዎ ተከልክሏል። ለድጋፍ benu@example.com ያግኙ።",
-        "approved_message": "እንኳን ደህና መጡ! መመዝገቢያዎ ተቀባይነት አግኝቷል። መሣሪያዎችንና ሥልጠናዎችን ለመዳሰስ /menu ይጠቀሙ!",
         "resources_title": "የሚገኙ ሥልጠና መሣሪያዎች:",
         "no_resources": "እስካሁን መሣሪያዎች የሉም።",
         "trainings_past": "ያለፉ ሥልጠና ዝግጅቶች:",
-        "trainings_upcoming": "መጪ ሥልጠና ዝግጅቶች:",
-        "signup_thanks": "ለመመዝገብዎ እናመሰግናለን፣ {name}! እባክዎ ከቡድናችን ማረጋገጫ ይጠብቁ። በቅርቡ ይነገርዎታል።",
-        "register_prompt": "የኩባንያዎን ስም ያስገቡ:",
+        "trainings_upcoming": "በቅርቡ የሚጀመሩ ስልጠናዎች:",
+        "signup_prompt": "እባክዎ ሙሉ ስምዎን ያስፈልጋል:",
+        "survey_company_size": "የኩባንያዎ መጠን ምንድን ነው? (ለምሳሌ፡ ትንሽ፣ መካከለኛ፣ ትልቅ):",
+        "networking_title": "በምድብ መልክ ኔትወርክ (ቢስኩት እና ግብርና ዘርፍ):",
+        "register_prompt": "እባክዎ የኩባንያዎን ስም ያስፈልጋል:",
         "news_title": "የቅርብ ጊዜ ማስታወቂያዎች:",
-        "contact_info": "ያግኙን:\nኢሜል: benu@example.com\nስልክ: +251921756683\nአድራሻ: አዲስ አበባ",
+        "contact_info": "ያግኙን:\nኢሜል: benu@example.com\nስልክ: +251921756683\nአድራሻ: አዲስ አበባ፣ ቦሌ ክፍለ ከተማ፣ ወረዳ 03፣ ቤት ቁ. 4/10/A5/FL8",
         "subscribed": "ለዜና ዝመናዎች ተመዝግበዋል!",
-        "phone_prompt": "ስልክ ቁጥርዎን ያስገቡ (ለምሳሌ፡ +251912345678):",
-        "email_prompt": "ኢሜልዎን ያስገቡ (ለምሳሌ፡ john.doe@example.com):",
-        "company_prompt": "የኩባንያዎን ስም ያስገቡ (ለምሳሌ፡ ዶኤ ቢስኩት):",
-        "description_prompt": "ኩባንያዎ ምን እንደሚሰራ ይግለጹ (ለምሳሌ፡ የተጠናከሩ ቢስኩቶችን እንሰራለን):",
-        "manager_prompt": "የሥራ አስኪያጁን ስም ያስገቡ:",
+        "signup_thanks": "ለመመዝገብዎ እናመሰግናለን፣ {name}! መመዝገቢያዎ ለማረጋገጫ በመጠባበቅ ላይ ነው።",
+        "register_thanks": "{company} በኔትወርክ ውስጥ ተመዝግቧል!",
+        "phone_prompt": "እባክዎ ስልክ ቁጥርዎን ያስፈልጋል:",
+        "email_prompt": "እባክዎ ኢሜልዎን ያስፈልጋል:",
+        "company_prompt": "እባክዎ የኩባንያዎን ስም ያስፈልጋል:",
+        "description_prompt": "እባክዎ የኩባኒዎ መግለጫ ያስፈልጋል:",
+        "manager_prompt": "እባክዎ የሥራ አስኪያጁን ስም ያስፈልጋል:",
         "categories_prompt": "ምድቦችን ይምረጡ (ጨርሰዋል የሚለውን ይጫኑ):",
         "public_prompt": "ኢሜልዎን በይፋ ይጋሩ? (አዎ/አይ):",
         "cat_added": "{cat} ታክሏል። ተጨማሪ ይምረጡ ወይም ጨርሰዋል ይጫኑ:",
@@ -163,6 +198,11 @@ MESSAGES = {
         "profile_email": "አዲሸ ኢሜል:",
         "profile_company": "አዲስ ኩባንያ:",
         "profile_updated": "መገለጫ ተሻሽሏል!",
+        "survey_satisfaction": "ሥልጠናው ምን ያህል እንደሚያረካዎት? (1-5):",
+        "survey_thanks": "ለአስተያየትዎ እናመሰግናለን!",
+        "pending_message": "መመዝገቢያዎ ለማረጋገጫ በመጠባበቅ ላይ ነው። እባክዎ ይጠብቁ።",
+        "denied_message": "መመዝገቢያዎ ተከልክሏል። ለድጋፍ benu@example.com ያግኙ።",
+        "approved_message": "እንኳን ደህና መጡ! መመዝገቢያዎ ተቀባይነት አግኝቷል። መሣሪያዎችንና ሥልጠናዎችን ለመዳሰስ /menu ይጠቀሙ!"
     }
 }
 
@@ -171,16 +211,6 @@ def get_user_status(username):
     try:
         cell = users_sheet.find(username)
         return users_sheet.row_values(cell.row)[8] if cell else None
-    except gspread.exceptions.CellNotFound:
-        return None
-
-def get_user_info(username):
-    try:
-        cell = users_sheet.find(username)
-        if cell:
-            row = users_sheet.row_values(cell.row)
-            return {"name": row[1], "phone": row[2], "email": row[3], "company": row[4], "description": row[5], "chat_id": row[6]}
-        return None
     except gspread.exceptions.CellNotFound:
         return None
 
@@ -193,8 +223,10 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     lang = context.user_data.get("lang", "en")
     messages = MESSAGES[lang]
 
-    if status == "Approved":
-        await show_options_menu(update, context, lang)
+    if not username:
+        await update.message.reply_text("🌟 *Please set a Telegram username in your profile to use this bot.* 🌟", parse_mode="Markdown")
+    elif status == "Approved":
+        await show_options(update, context, lang)
     elif status == "Denied":
         await update.message.reply_text(f"🌟 *{messages['denied_message']}* 🌟", parse_mode="Markdown")
     elif status == "Pending":
@@ -225,22 +257,6 @@ async def menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     else:
         await update.message.reply_text("🌟 *Please register first using /start.* 🌟", parse_mode="Markdown")
 
-async def show_options_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, lang):
-    context.user_data["lang"] = lang
-    messages = MESSAGES[lang]
-    keyboard = [
-        [InlineKeyboardButton(messages["ask"], callback_data="cmd:ask"),
-         InlineKeyboardButton(messages["resources"], callback_data="cmd:resources")],
-        [InlineKeyboardButton(messages["training_events"], callback_data="cmd:training_events"),
-         InlineKeyboardButton(messages["networking"], callback_data="cmd:networking")],
-        [InlineKeyboardButton(messages["news"], callback_data="cmd:news"),
-         InlineKeyboardButton(messages["contact"], callback_data="cmd:contact")],
-        [InlineKeyboardButton(messages["subscribenews"], callback_data="cmd:subscribenews"),
-         InlineKeyboardButton(messages["learn_startup_skills"], callback_data="cmd:learn_startup_skills")],
-        [InlineKeyboardButton(messages["update_profile"], callback_data="cmd:update_profile")]
-    ]
-    await update.message.reply_text(f"🌟 *{messages['options']}* 🌟", reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown")
-
 async def show_options(update: Update, context: ContextTypes.DEFAULT_TYPE, lang):
     context.user_data["lang"] = lang
     messages = MESSAGES[lang]
@@ -257,15 +273,21 @@ async def show_options(update: Update, context: ContextTypes.DEFAULT_TYPE, lang)
     ]
     await update.callback_query.edit_message_text(f"🌟 *{messages['options']}* 🌟", reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown")
 
-async def register_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    lang = context.user_data.get("lang", "en")
+async def show_options_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, lang):
+    context.user_data["lang"] = lang
     messages = MESSAGES[lang]
-    context.user_data["register_step"] = "username"
-    await update.callback_query.message.reply_text(
-        f"🌟 *Please enter your Telegram username (e.g., @Beth):* 🌟",
-        parse_mode="Markdown",
-        reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Cancel", callback_data="cmd:cancel")]])
-    )
+    keyboard = [
+        [InlineKeyboardButton(messages["ask"], callback_data="cmd:ask"),
+         InlineKeyboardButton(messages["resources"], callback_data="cmd:resources")],
+        [InlineKeyboardButton(messages["training_events"], callback_data="cmd:training_events"),
+         InlineKeyboardButton(messages["networking"], callback_data="cmd:networking")],
+        [InlineKeyboardButton(messages["news"], callback_data="cmd:news"),
+         InlineKeyboardButton(messages["contact"], callback_data="cmd:contact")],
+        [InlineKeyboardButton(messages["subscribenews"], callback_data="cmd:subscribenews"),
+         InlineKeyboardButton(messages["learn_startup_skills"], callback_data="cmd:learn_startup_skills")],
+        [InlineKeyboardButton(messages["update_profile"], callback_data="cmd:update_profile")]
+    ]
+    await update.message.reply_text(f"🌟 *{messages['options']}* 🌟", reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown")
 
 async def ask(update: Update, context: ContextTypes.DEFAULT_TYPE):
     lang = context.user_data.get("lang", "en")
@@ -326,11 +348,9 @@ async def training_events(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def signup(update: Update, context: ContextTypes.DEFAULT_TYPE):
     lang = context.user_data.get("lang", "en")
-    query = update.callback_query
-    messages = MESSAGES[lang]
-    keyboard = [[InlineKeyboardButton(t["name"], callback_data=f"signup_training:{t['name']}") for t in UPCOMING_TRAININGS[i:i+2]] for i in range(0, len(UPCOMING_TRAININGS), 2)]
-    keyboard.append([InlineKeyboardButton("🔙 Back to Main Menu", callback_data="cmd:main_menu")])
-    await query.message.reply_text(f"🌟 *Select a training to sign up for:* 🌟", parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
+    context.user_data["signup_step"] = "name"
+    keyboard = [[InlineKeyboardButton("🔙 Back to Main Menu", callback_data="cmd:main_menu")]]
+    await update.message.reply_text(f"🌟 *{MESSAGES[lang]['signup_prompt']}* 🌟", parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
 
 async def networking(update: Update, context: ContextTypes.DEFAULT_TYPE):
     lang = context.user_data.get("lang", "en")
@@ -347,7 +367,7 @@ async def networking(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 network_companies[cat] = []
             network_companies[cat].append({"name": entry["Company"], "description": entry["Description"], "contact": entry["Phone"] if entry["PublicEmail"] == "Yes" else "Private"})
     sections = [f"🌟 *{cat}* 🌟\n" + "\n".join(f"🏢 *{c['name']}*\n_{c['description']}_\n📞 Contact: {c['contact']}" for c in companies) for cat, companies in network_companies.items()]
-    text = f"🌟 *{messages['networking']}* 🌟\n\n" + "\n🌟----🌟\n".join(sections)
+    text = f"🌟 *{messages['networking_title']}* 🌟\n\n" + "\n🌟----🌟\n".join(sections)
     keyboard = [[InlineKeyboardButton("📝 Register", callback_data="cmd:register")], [InlineKeyboardButton("🔙 Back to Main Menu", callback_data="cmd:main_menu")]]
     await query.message.reply_text(text, parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
 
@@ -355,7 +375,7 @@ async def register(update: Update, context: ContextTypes.DEFAULT_TYPE):
     lang = context.user_data.get("lang", "en")
     context.user_data["register_step"] = "company"
     keyboard = [[InlineKeyboardButton("🔙 Back to Main Menu", callback_data="cmd:main_menu")]]
-    await update.callback_query.message.reply_text(f"🌟 *{MESSAGES[lang]['register_prompt']}* 🌟", parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
+    await update.message.reply_text(f"🌟 *{MESSAGES[lang]['register_prompt']}* 🌟", parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
 
 async def news(update: Update, context: ContextTypes.DEFAULT_TYPE):
     lang = context.user_data.get("lang", "en")
@@ -363,99 +383,170 @@ async def news(update: Update, context: ContextTypes.DEFAULT_TYPE):
     messages = MESSAGES[lang]
     news_items = [
         "🌟 *March 12, 2025*: _Benu secured ETB 2.9M from SWR Ethiopia._",
-        "🌟 *April 10, 2025*: _First training held—29 saleswomen trained in biscuit production._"
+        "🌟 *April 10, 2025*: _First training held—29 saleswomen trained! See /training_events._",
+        "🌟 *May 2025*: _New production line launches._",
+        "🌟 *May 15, 2025*: _Networking Event—register at /networking or /training_events._"
     ]
     text = f"🌟 *{messages['news_title']}* 🌟\n\n" + "\n".join(news_items)
-    keyboard = [[InlineKeyboardButton("🔙 Back to Main Menu", callback_data="cmd:main_menu")]]
+    keyboard = [[InlineKeyboardButton("🔔 Subscribe", callback_data="cmd:subscribenews")], [InlineKeyboardButton("🔙 Back to Main Menu", callback_data="cmd:main_menu")]]
     await query.message.reply_text(text, parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
 
 async def contact(update: Update, context: ContextTypes.DEFAULT_TYPE):
     lang = context.user_data.get("lang", "en")
     query = update.callback_query
     messages = MESSAGES[lang]
-    await query.message.reply_text(f"🌟 *{messages['contact_info']}* 🌟", parse_mode="Markdown", reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Back to Main Menu", callback_data="cmd:main_menu")]]))
+    text = f"🌟 *{messages['contact_info'].split(':')[0]}* 🌟\n\n✉️ *Email:* benu@example.com\n📞 *Phone:* +251921756683\n🏢 *Address:* Addis Ababa, Bole Sub city, Woreda 03, H.N. 4/10/A5/FL8"
+    keyboard = [[InlineKeyboardButton("🔙 Back to Main Menu", callback_data="cmd:main_menu")]]
+    await query.message.reply_text(text, parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
 
 async def subscribenews(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    chat_id = update.callback_query.message.chat_id
     lang = context.user_data.get("lang", "en")
     query = update.callback_query
-    messages = MESSAGES[lang]
-    context.user_data["subscribed"] = True
-    await query.message.reply_text(f"🌟 *{messages['subscribed']}* 🌟", parse_mode="Markdown", reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Back to Main Menu", callback_data="cmd:main_menu")]]))
+    if training_sheet.find(str(chat_id)) is None:
+        training_sheet.append_row([str(chat_id), "", "", "", "", datetime.now().isoformat()])
+    keyboard = [[InlineKeyboardButton("🔙 Back to Main Menu", callback_data="cmd:main_menu")]]
+    await query.message.reply_text(f"🌟 *{MESSAGES[lang]['subscribed']}* 🌟", parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
 
 async def learn_startup_skills(update: Update, context: ContextTypes.DEFAULT_TYPE):
     lang = context.user_data.get("lang", "en")
     query = update.callback_query
     messages = MESSAGES[lang]
-    completed = context.user_data.get("completed_modules", [])
-    keyboard = [[InlineKeyboardButton(f"{m['name']} {'✅' if m['id'] in completed else ''}", callback_data=f"module:{m['id']}") for m in TRAINING_MODULES[i:i+2]] for i in range(0, len(TRAINING_MODULES), 2)]
+    keyboard = [[InlineKeyboardButton(f"📚 {m['name']}", callback_data=f"module:{m['id']}")] for m in TRAINING_MODULES]
     keyboard.append([InlineKeyboardButton("🔙 Back to Main Menu", callback_data="cmd:main_menu")])
-    await query.message.reply_text(f"🌟 *{messages['modules_title']}* 🌟", parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
+    await query.message.reply_text(f"🌟 *{messages['modules_title']}* 🌟", reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown")
 
 async def update_profile(update: Update, context: ContextTypes.DEFAULT_TYPE):
     lang = context.user_data.get("lang", "en")
     query = update.callback_query
     messages = MESSAGES[lang]
     keyboard = [
-        [InlineKeyboardButton(messages["profile_name"], callback_data="profile:name"), InlineKeyboardButton(messages["profile_phone"], callback_data="profile:phone")],
-        [InlineKeyboardButton(messages["profile_email"], callback_data="profile:email"), InlineKeyboardButton(messages["profile_company"], callback_data="profile:company")],
+        [InlineKeyboardButton("Name", callback_data="profile:name"), InlineKeyboardButton("Phone", callback_data="profile:phone")],
+        [InlineKeyboardButton("Email", callback_data="profile:email"), InlineKeyboardButton("Company", callback_data="profile:company")],
         [InlineKeyboardButton("🔙 Back to Main Menu", callback_data="cmd:main_menu")]
     ]
-    await query.message.reply_text(f"🌟 *{messages['profile_prompt']}* 🌟", parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
+    await query.message.reply_text(f"🌟 *{messages['profile_prompt']}* 🌟", reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown")
 
 async def handle_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    lang = context.user_data.get("lang", "en")
-    messages = MESSAGES[lang]
+    chat_id = update.message.chat_id
     text = update.message.text
-    step = context.user_data.get("register_step")
+    lang = context.user_data.get("lang", "en")
     username = update.message.from_user.username
+    messages = MESSAGES[lang]
 
-    if step == "username":
-        context.user_data["username"] = text
-        context.user_data["register_step"] = "name"
-        await update.message.reply_text(f"🌟 *{messages['signup_prompt']}* 🌟", parse_mode="Markdown")
-    elif step == "name":
-        context.user_data["name"] = text
-        context.user_data["register_step"] = "phone"
-        await update.message.reply_text(f"🌟 *{messages['phone_prompt']}* 🌟", parse_mode="Markdown")
-    elif step == "phone":
-        context.user_data["phone"] = text
-        context.user_data["register_step"] = "email"
-        await update.message.reply_text(f"🌟 *{messages['email_prompt']}* 🌟", parse_mode="Markdown")
-    elif step == "email":
-        context.user_data["email"] = text
-        context.user_data["register_step"] = "company"
-        await update.message.reply_text(f"🌟 *{messages['company_prompt']}* 🌟", parse_mode="Markdown")
-    elif step == "company":
-        context.user_data["company"] = text
-        context.user_data["register_step"] = "description"
-        await update.message.reply_text(f"🌟 *{messages['description_prompt']}* 🌟", parse_mode="Markdown")
-    elif step == "description":
-        context.user_data["description"] = text
-        user_data = context.user_data
-        users_sheet.append_row([username, user_data["name"], user_data["phone"], user_data["email"], user_data["company"], user_data["description"], str(user_data["chat_id"]), datetime.now().isoformat(), "Pending"])
-        await update.message.reply_text(f"🌟 *{messages['signup_thanks'].format(name=user_data['name'])}* 🌟", parse_mode="Markdown")
-        await context.bot.send_message(chat_id=MANAGER_CHAT_ID, text=f"New registration:\nUsername: {username}\nName: {user_data['name']}\nPhone: {user_data['phone']}\nEmail: {user_data['email']}\nCompany: {user_data['company']}\nDescription: {user_data['description']}", reply_markup=InlineKeyboardMarkup([
-            [InlineKeyboardButton("Approve", callback_data=f"approve:{username}"), InlineKeyboardButton("Deny", callback_data=f"deny:{username}")]
-        ]))
-        del context.user_data["register_step"]
-    elif step in ["name", "phone", "email", "company"]:
-        field = step
+    if "asking" in context.user_data:
+        await handle_ask(update, context)
+    elif "signup_step" in context.user_data:
+        step = context.user_data["signup_step"]
+        keyboard = [[InlineKeyboardButton("🔙 Back to Main Menu", callback_data="cmd:main_menu")]]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        if step == "name":
+            context.user_data["name"] = text
+            context.user_data["signup_step"] = "phone"
+            await update.message.reply_text(f"🌟 *{messages['phone_prompt']}* 🌟", parse_mode="Markdown", reply_markup=reply_markup)
+        elif step == "phone":
+            context.user_data["phone"] = text
+            context.user_data["signup_step"] = "email"
+            await update.message.reply_text(f"🌟 *{messages['email_prompt']}* 🌟", parse_mode="Markdown", reply_markup=reply_markup)
+        elif step == "email":
+            context.user_data["email"] = text
+            context.user_data["signup_step"] = "company"
+            await update.message.reply_text(f"🌟 *{messages['company_prompt']}* 🌟", parse_mode="Markdown", reply_markup=reply_markup)
+        elif step == "company":
+            context.user_data["company"] = text
+            user_data = context.user_data
+            users_sheet.append_row([username, user_data["name"], user_data["phone"], user_data["email"], user_data["company"], "", str(chat_id), datetime.now().isoformat(), "Pending"])
+            await update.message.reply_text(f"🌟 *{messages['signup_thanks'].format(name=user_data['name'])}* 🌟", parse_mode="Markdown", reply_markup=reply_markup)
+            await context.bot.send_message(MANAGER_CHAT_ID, f"New Signup:\nUsername: {username}\nName: {user_data['name']}\nPhone: {user_data['phone']}\nEmail: {user_data['email']}\nCompany: {user_data['company']}", reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("Approve", callback_data=f"approve:{username}"), InlineKeyboardButton("Deny", callback_data=f"deny:{username}")]
+            ]))
+            del context.user_data["signup_step"]
+    elif "register_step" in context.user_data:
+        step = context.user_data["register_step"]
+        keyboard = [[InlineKeyboardButton("🔙 Back to Main Menu", callback_data="cmd:main_menu")]]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        if step == "company":
+            context.user_data["company"] = text
+            context.user_data["register_step"] = "phone"
+            await update.message.reply_text(f"🌟 *{messages['phone_prompt']}* 🌟", parse_mode="Markdown", reply_markup=reply_markup)
+        elif step == "phone":
+            context.user_data["phone"] = text
+            context.user_data["register_step"] = "email"
+            await update.message.reply_text(f"🌟 *{messages['email_prompt']}* 🌟", parse_mode="Markdown", reply_markup=reply_markup)
+        elif step == "email":
+            context.user_data["email"] = text
+            context.user_data["register_step"] = "description"
+            await update.message.reply_text(f"🌟 *{messages['description_prompt']}* 🌟", parse_mode="Markdown", reply_markup=reply_markup)
+        elif step == "description":
+            context.user_data["description"] = text
+            context.user_data["register_step"] = "manager"
+            await update.message.reply_text(f"🌟 *{messages['manager_prompt']}* 🌟", parse_mode="Markdown", reply_markup=reply_markup)
+        elif step == "manager":
+            context.user_data["manager"] = text
+            context.user_data["register_step"] = "categories"
+            keyboard = [
+                [InlineKeyboardButton("Biscuit Production", callback_data="cat:Biscuit Production"), InlineKeyboardButton("Agriculture", callback_data="cat:Agriculture")],
+                [InlineKeyboardButton("Packaging", callback_data="cat:Packaging"), InlineKeyboardButton("Marketing", callback_data="cat:Marketing")],
+                [InlineKeyboardButton("Done", callback_data="cat:done")],
+                [InlineKeyboardButton("🔙 Back to Main Menu", callback_data="cmd:main_menu")]
+            ]
+            await update.message.reply_text(f"🌟 *{messages['categories_prompt']}* 🌟", reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown")
+        elif step == "public":
+            context.user_data["public"] = text.lower() in ["yes", "y"]
+            data = [str(chat_id), context.user_data["company"], context.user_data["phone"], context.user_data["email"], context.user_data["description"], context.user_data["manager"], ",".join(context.user_data.get("categories", [])), datetime.now().isoformat(), "Yes" if context.user_data["public"] else "No"]
+            network_sheet.append_row(data)
+            await context.bot.send_message(MANAGER_CHAT_ID, f"New Network Reg: {data[1:]}")
+            await update.message.reply_text(f"🌟 *{messages['register_thanks'].format(company=data[1])}* 🌟", parse_mode="Markdown", reply_markup=reply_markup)
+            del context.user_data["register_step"]
+    elif "quiz_step" in context.user_data:
+        step = context.user_data["quiz_step"]
+        module_id = context.user_data["quiz_module"]
+        module = next(m for m in TRAINING_MODULES if m["id"] == module_id)
+        question = module["quiz"][step - 1]
+        keyboard = [[InlineKeyboardButton("🔙 Back to Main Menu", callback_data="cmd:main_menu")]]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        if text.lower() == question["answer"].lower():
+            await update.message.reply_text(f"🌟 *{messages['quiz_correct'].format(explain=question['explain'])}* 🌟", parse_mode="Markdown", reply_markup=reply_markup)
+            context.user_data["quiz_score"] = context.user_data.get("quiz_score", 0) + 1
+        else:
+            await update.message.reply_text(f"🌟 *{messages['quiz_wrong'].format(answer=question['answer'], explain=question['explain'])}* 🌟", parse_mode="Markdown", reply_markup=reply_markup)
+        if step < len(module["quiz"]):
+            context.user_data["quiz_step"] += 1
+            next_q = module["quiz"][step]
+            keyboard = [[InlineKeyboardButton(opt, callback_data=f"quiz:{opt}")] for opt in next_q["options"]]
+            keyboard.append([InlineKeyboardButton("🔙 Back to Main Menu", callback_data="cmd:main_menu")])
+            await update.message.reply_text(f"🌟 *{messages['quiz_question'].format(num=step + 1, q=next_q['q'])}* 🌟", reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown")
+        else:
+            score = context.user_data.get("quiz_score", 0)
+            context.user_data["completed_modules"] = context.user_data.get("completed_modules", []) + [module_id]
+            await update.message.reply_text(f"🌟 *{messages['quiz_done'].format(score=score, total=len(module['quiz']))}* 🌟", parse_mode="Markdown", reply_markup=reply_markup)
+            del context.user_data["quiz_step"]
+            del context.user_data["quiz_score"]
+    elif "profile_step" in context.user_data:
+        step = context.user_data["profile_step"]
         cell = users_sheet.find(username)
-        col = {"name": 2, "phone": 3, "email": 4, "company": 5}[field]
-        users_sheet.update_cell(cell.row, col, text)
-        await update.message.reply_text(f"🌟 *{messages['profile_updated']}* 🌟", parse_mode="Markdown", reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Back to Main Menu", callback_data="cmd:main_menu")]]))
-        del context.user_data["profile_step"]
+        keyboard = [[InlineKeyboardButton("🔙 Back to Main Menu", callback_data="cmd:main_menu")]]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        if cell:
+            row = cell.row
+            col = {"name": 2, "phone": 3, "email": 4, "company": 5}[step]
+            users_sheet.update_cell(row, col, text)
+            await update.message.reply_text(f"🌟 *{messages['profile_updated']}* 🌟", parse_mode="Markdown", reply_markup=reply_markup)
+            del context.user_data["profile_step"]
 
 async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
+    await query.answer()
     lang = context.user_data.get("lang", "en")
     messages = MESSAGES[lang]
     username = query.from_user.username
 
     if query.data.startswith("lang:"):
-        lang = query.data.split("lang:")[1]
-        context.user_data["lang"] = lang
-        await register_user(update, context)
+        lang_choice = query.data.split("lang:")[1]
+        context.user_data["lang"] = lang_choice
+        context.user_data["signup_step"] = "name"
+        keyboard = [[InlineKeyboardButton("Cancel", callback_data="cmd:main_menu")]]
+        await query.message.reply_text(f"🌟 *{MESSAGES[lang_choice]['signup_prompt']}* 🌟", parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
     elif query.data == "cmd:ask":
         await ask(update, context)
     elif query.data == "cmd:ask_again":
@@ -513,12 +604,6 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
             [InlineKeyboardButton("⬇️ Get All Resources", callback_data="cmd:all_resources"), InlineKeyboardButton("🔙 Back to Main Menu", callback_data="cmd:main_menu")]
         ]
         await query.edit_message_text(text, parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard), disable_web_page_preview=True)
-    elif "signup_training:" in query.data:
-        training_name = query.data.split("signup_training:")[1]
-        user_info = get_user_info(username)
-        training_sheet.append_row([username, user_info["name"], training_name, datetime.now().isoformat()])
-        keyboard = [[InlineKeyboardButton("🔙 Back to Main Menu", callback_data="cmd:main_menu")]]
-        await query.message.reply_text(f"🌟 *Signed up for {training_name}!* 🌟", parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
     elif "module:" in query.data:
         module_id = int(query.data.split("module:")[1])
         module = next(m for m in TRAINING_MODULES if m["id"] == module_id)
@@ -564,27 +649,53 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
         field = query.data.split("profile:")[1]
         context.user_data["profile_step"] = field
         await query.message.reply_text(f"🌟 *{messages[f'profile_{field}']}* 🌟", parse_mode="Markdown", reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Back to Main Menu", callback_data="cmd:main_menu")]]))
+    elif "cat:" in query.data:
+        cat = query.data.split("cat:")[1]
+        if cat == "done":
+            context.user_data["register_step"] = "public"
+            keyboard = [[InlineKeyboardButton("🔙 Back to Main Menu", callback_data="cmd:main_menu")]]
+            await query.edit_message_text(f"🌟 *{messages['public_prompt']}* 🌟", parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
+        else:
+            context.user_data.setdefault("categories", []).append(cat)
+            await query.edit_message_text(f"🌟 *{messages['cat_added'].format(cat=cat)}* 🌟", parse_mode="Markdown")
 
-async def all_resources(update: Update, context: ContextTypes.DEFAULT_TYPE, lang):
+async def all_resources(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    lang = context.user_data.get("lang", "en")
     query = update.callback_query
-    messages = MESSAGES[lang]
-    links = [
-        f"📹 *{t['name']}* Video: {t['video']}" if t.get("video") else f"📄 *{t['name']}* Resource: {t['resources']}"
-        for t in PAST_TRAININGS if t.get("video") or t.get("resources")
-    ]
-    text = f"🌟 *All Resources* 🌟\n\n" + "\n".join(links)
+    links = [f"📹 *{t['name']}* Video: {t['video']}" if t.get("video") else f"📄 *{t['name']}* Resource: {t['resources']}" for t in PAST_TRAININGS if t.get("video") or t.get("resources")]
     keyboard = [[InlineKeyboardButton("🔙 Back to Main Menu", callback_data="cmd:main_menu")]]
-    await query.edit_message_text(text, parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
+    await query.message.reply_text(f"🌟 *All Resources* 🌟\n\n" + "\n".join(links), parse_mode="Markdown", disable_web_page_preview=True, reply_markup=InlineKeyboardMarkup(keyboard))
 
-# Main function to run the bot
+def schedule_notifications(app):
+    for training in UPCOMING_TRAININGS:
+        date = datetime.strptime(training["date"], "%Y-%m-%d")
+        notify_date = date - timedelta(days=7)
+        if notify_date > datetime.now():
+            scheduler.add_job(lambda: notify_training(app, training["name"], training["date"]), "date", run_date=notify_date)
+
+async def notify_training(app, name, date):
+    for row in training_sheet.get_all_records():
+        chat_id = row["ChatID"]
+        keyboard = [[InlineKeyboardButton("🔙 Back to Main Menu", callback_data="cmd:main_menu")]]
+        await app.bot.send_message(chat_id, f"🌟 Reminder: *{name}* training on _{date}_ is in 7 days! Reply /training_events for details.", parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
+
 def main():
-    application = Application.builder().token(os.environ.get("TELEGRAM_TOKEN")).build()
-    application.add_handler(CommandHandler("start", start))
-    application.add_handler(CommandHandler("menu", menu))
-    application.add_handler(CallbackQueryHandler(button))
-    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_reply))
-    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_ask))
-    application.run_polling()
+    app = Application.builder().token(os.environ.get("TELEGRAM_TOKEN", "7910442120:AAFMUhnwTONoyF1xilwRpjWIRCTmGa0den4")).build()
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("menu", menu))
+    app.add_handler(CommandHandler("signup", signup))
+    app.add_handler(CommandHandler("register", register))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_reply))
+    app.add_handler(CallbackQueryHandler(button))
+    schedule_notifications(app)
+    port = int(os.environ.get("PORT", 8443))
+    app.run_webhook(
+        listen="0.0.0.0",
+        port=port,
+        url_path="/",
+        webhook_url=f"https://{os.environ['RENDER_EXTERNAL_HOSTNAME']}/"
+    )
+    print("Bot is running on Render...")
 
 if __name__ == "__main__":
     main()
