@@ -11,7 +11,7 @@ import telegram.error
 
 # Google Sheets setup
 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-creds_json_raw = os.environ.get("这里没问题吧_CREDENTIALS", "{}")
+creds_json_raw = os.environ.get("GOOGLE_CREDENTIALS", "{}")
 creds_json = json.loads(creds_json_raw)
 creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_json, scope)
 client = gspread.authorize(creds)
@@ -160,8 +160,8 @@ MESSAGES = {
         "profile_prompt": "ምን ማሻሻል ይፈልጋሉ?:",
         "profile_name": "አዲስ ስም:",
         "profile_phone": "አዲስ ስልክ:",
-        "profile_email": "አዲስ ኢሜል:",
-        "profile_company": "አዲሸ ኩባንያ:",
+        "profile_email": "አዲሸ ኢሜል:",
+        "profile_company": "አዲስ ኩባንያ:",
         "profile_updated": "መገለጫ ተሻሽሏል!",
     }
 }
@@ -297,7 +297,14 @@ async def resources(update: Update, context: ContextTypes.DEFAULT_TYPE):
     lang = context.user_data.get("lang", "en")
     query = update.callback_query
     messages = MESSAGES[lang]
-    sections = [f"✨ *{t['name']}* _({t['date']})_\n📹 [Watch]({t['video']}) | 📄 [Read]({t['resources']})\n_{t['description']}_" for t in PAST_TRAININGS if t.get("video") or t.get("resources")]
+    sections = [
+        f"✨ *{t['name']}* _({t['date']})_\n"
+        f"{'📹 [Watch]({t['video']})' if t.get('video') else ''}"
+        f"{' | ' if t.get('video') and t.get('resources') else ''}"
+        f"{'📄 [Read]({t['resources']})' if t.get('resources') else ''}"
+        f"\n_{t['description']}_"
+        for t in PAST_TRAININGS if t.get("video") or t.get("resources")
+    ]
     text = f"🌟 *{messages['resources_title']}* 🌟\n\n" + "\n🌟====🌟\n".join(sections) if sections else messages["no_resources"]
     keyboard = [
         [InlineKeyboardButton("🎥 Videos Only", callback_data="filter:videos"), InlineKeyboardButton("📜 Docs Only", callback_data="filter:resources")],
@@ -354,257 +361,152 @@ async def news(update: Update, context: ContextTypes.DEFAULT_TYPE):
     lang = context.user_data.get("lang", "en")
     query = update.callback_query
     messages = MESSAGES[lang]
-    news_items = ["🌟 *March 12, 2025*: _Benu secured ETB 2.9M from SWR Ethiopia._", "🌟 *April 10, 2025*: _First training held—29 saleswomen trained!_"]
+    news_items = [
+        "🌟 *March 12, 2025*: _Benu secured ETB 2.9M from SWR Ethiopia._",
+        "🌟 *April 10, 2025*: _First training held—29 saleswomen trained in biscuit production._"
+    ]
     text = f"🌟 *{messages['news_title']}* 🌟\n\n" + "\n".join(news_items)
-    keyboard = [[InlineKeyboardButton("🔔 Subscribe", callback_data="cmd:subscribenews")], [InlineKeyboardButton("🔙 Back to Main Menu", callback_data="cmd:main_menu")]]
+    keyboard = [[InlineKeyboardButton("🔙 Back to Main Menu", callback_data="cmd:main_menu")]]
     await query.message.reply_text(text, parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
 
 async def contact(update: Update, context: ContextTypes.DEFAULT_TYPE):
     lang = context.user_data.get("lang", "en")
     query = update.callback_query
     messages = MESSAGES[lang]
-    text = f"🌟 *{messages['contact_info'].split(':')[0]}* 🌟\n\n✉️ *Email:* benu@example.com\n📞 *Phone:* +251921756683\n🏢 *Address:* Addis Ababa"
-    keyboard = [[InlineKeyboardButton("🔙 Back to Main Menu", callback_data="cmd:main_menu")]]
-    await query.message.reply_text(text, parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
+    await query.message.reply_text(f"🌟 *{messages['contact_info']}* 🌟", parse_mode="Markdown", reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Back to Main Menu", callback_data="cmd:main_menu")]]))
 
 async def subscribenews(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    username = update.callback_query.from_user.username
     lang = context.user_data.get("lang", "en")
     query = update.callback_query
     messages = MESSAGES[lang]
-    if training_sheet.find(username) is None:
-        user_info = get_user_info(username)
-        training_sheet.append_row([username, user_info["name"], "Subscribed to News", datetime.now().isoformat()])
-    keyboard = [[InlineKeyboardButton("🔙 Back to Main Menu", callback_data="cmd:main_menu")]]
-    await query.message.reply_text(f"🌟 *{messages['subscribed']}* 🌟", parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
+    context.user_data["subscribed"] = True
+    await query.message.reply_text(f"🌟 *{messages['subscribed']}* 🌟", parse_mode="Markdown", reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Back to Main Menu", callback_data="cmd:main_menu")]]))
 
 async def learn_startup_skills(update: Update, context: ContextTypes.DEFAULT_TYPE):
     lang = context.user_data.get("lang", "en")
     query = update.callback_query
     messages = MESSAGES[lang]
-    keyboard = [[InlineKeyboardButton(f"📚 {m['name']}", callback_data=f"module:{m['id']}")] for m in TRAINING_MODULES]
+    completed = context.user_data.get("completed_modules", [])
+    keyboard = [[InlineKeyboardButton(f"{m['name']} {'✅' if m['id'] in completed else ''}", callback_data=f"module:{m['id']}") for m in TRAINING_MODULES[i:i+2]] for i in range(0, len(TRAINING_MODULES), 2)]
     keyboard.append([InlineKeyboardButton("🔙 Back to Main Menu", callback_data="cmd:main_menu")])
-    await query.message.reply_text(f"🌟 *{messages['modules_title']}* 🌟", reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown")
+    await query.message.reply_text(f"🌟 *{messages['modules_title']}* 🌟", parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
 
 async def update_profile(update: Update, context: ContextTypes.DEFAULT_TYPE):
     lang = context.user_data.get("lang", "en")
     query = update.callback_query
     messages = MESSAGES[lang]
     keyboard = [
-        [InlineKeyboardButton("Name", callback_data="profile:name"), InlineKeyboardButton("Phone", callback_data="profile:phone")],
-        [InlineKeyboardButton("Email", callback_data="profile:email"), InlineKeyboardButton("Company", callback_data="profile:company")],
+        [InlineKeyboardButton(messages["profile_name"], callback_data="profile:name"), InlineKeyboardButton(messages["profile_phone"], callback_data="profile:phone")],
+        [InlineKeyboardButton(messages["profile_email"], callback_data="profile:email"), InlineKeyboardButton(messages["profile_company"], callback_data="profile:company")],
         [InlineKeyboardButton("🔙 Back to Main Menu", callback_data="cmd:main_menu")]
     ]
-    await query.message.reply_text(f"🌟 *{messages['profile_prompt']}* 🌟", reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown")
+    await query.message.reply_text(f"🌟 *{messages['profile_prompt']}* 🌟", parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
 
 async def handle_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    chat_id = update.message.chat_id
-    username = update.message.from_user.username
-    text = update.message.text
     lang = context.user_data.get("lang", "en")
     messages = MESSAGES[lang]
-    status = get_user_status(username) if username else None
+    text = update.message.text
+    step = context.user_data.get("register_step")
+    username = update.message.from_user.username
 
-    if not username and "register_step" not in context.user_data:
-        await update.message.reply_text("🌟 *Please set a Telegram username in your profile to use this bot.* 🌟", parse_mode="Markdown")
-        return
-
-    if status != "Approved" and "register_step" not in context.user_data and "asking" not in context.user_data:
-        await update.message.reply_text(f"🌟 *{messages['pending_message' if status == 'Pending' else 'denied_message']}* 🌟", parse_mode="Markdown")
-        return
-
-    if "asking" in context.user_data:
-        await handle_ask(update, context)
-    elif "register_step" in context.user_data:
-        step = context.user_data["register_step"]
-        keyboard = [[InlineKeyboardButton("Cancel", callback_data="cmd:cancel")]]
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        if step == "username":
-            if not text.startswith("@"):
-                text = f"@{text}"
-            context.user_data["username"] = text
-            context.user_data["register_step"] = "name"
-            await update.message.reply_text(f"🌟 *{messages['signup_prompt']}* 🌟", parse_mode="Markdown", reply_markup=reply_markup)
-        elif step == "name":
-            context.user_data["name"] = text
-            context.user_data["register_step"] = "phone"
-            await update.message.reply_text(f"🌟 *{messages['phone_prompt']}* 🌟", parse_mode="Markdown", reply_markup=reply_markup)
-        elif step == "phone":
-            context.user_data["phone"] = text
-            context.user_data["register_step"] = "email"
-            await update.message.reply_text(f"🌟 *{messages['email_prompt']}* 🌟", parse_mode="Markdown", reply_markup=reply_markup)
-        elif step == "email":
-            context.user_data["email"] = text
-            context.user_data["register_step"] = "company"
-            await update.message.reply_text(f"🌟 *{messages['company_prompt']}* 🌟", parse_mode="Markdown", reply_markup=reply_markup)
-        elif step == "company":
-            context.user_data["company"] = text
-            context.user_data["register_step"] = "description"
-            await update.message.reply_text(f"🌟 *{messages['description_prompt']}* 🌟", parse_mode="Markdown", reply_markup=reply_markup)
-        elif step == "description":
-            context.user_data["description"] = text
-            data = [context.user_data["username"], context.user_data["name"], context.user_data["phone"],
-                    context.user_data["email"], context.user_data["company"], text, str(chat_id), datetime.now().isoformat(), "Pending"]
-            users_sheet.append_row(data)
-            await update.message.reply_text(f"🌟 *{messages['signup_thanks'].format(name=data[1])}* 🌟", parse_mode="Markdown")
-            manager_text = f"New Registration Request:\nUsername: {data[0]}\nName: {data[1]}\nPhone: {data[2]}\nEmail: {data[3]}\nCompany: {data[4]}\nDescription: {data[5]}\nChat ID: {data[6]}"
-            keyboard = [[InlineKeyboardButton("Approve", callback_data=f"approve:{data[0]}"), InlineKeyboardButton("Deny", callback_data=f"deny:{data[0]}")]]
-            await context.bot.send_message(MANAGER_CHAT_ID, manager_text, reply_markup=InlineKeyboardMarkup(keyboard))
-            del context.user_data["register_step"]
-        elif step == "company_network":
-            context.user_data["company"] = text
-            context.user_data["register_step"] = "phone_network"
-            await update.message.reply_text(f"🌟 *{messages['phone_prompt']}* 🌟", parse_mode="Markdown", reply_markup=reply_markup)
-        elif step == "phone_network":
-            context.user_data["phone"] = text
-            context.user_data["register_step"] = "email_network"
-            await update.message.reply_text(f"🌟 *{messages['email_prompt']}* 🌟", parse_mode="Markdown", reply_markup=reply_markup)
-        elif step == "email_network":
-            context.user_data["email"] = text
-            context.user_data["register_step"] = "description_network"
-            await update.message.reply_text(f"🌟 *{messages['description_prompt']}* 🌟", parse_mode="Markdown", reply_markup=reply_markup)
-        elif step == "description_network":
-            context.user_data["description"] = text
-            context.user_data["register_step"] = "manager"
-            await update.message.reply_text(f"🌟 *{messages['manager_prompt']}* 🌟", parse_mode="Markdown", reply_markup=reply_markup)
-        elif step == "manager":
-            context.user_data["manager"] = text
-            context.user_data["register_step"] = "categories"
-            keyboard = [
-                [InlineKeyboardButton("Biscuit Production", callback_data="cat:Biscuit Production"), InlineKeyboardButton("Agriculture", callback_data="cat:Agriculture")],
-                [InlineKeyboardButton("Packaging", callback_data="cat:Packaging"), InlineKeyboardButton("Marketing", callback_data="cat:Marketing")],
-                [InlineKeyboardButton("Done", callback_data="cat:done")],
-                [InlineKeyboardButton("🔙 Back to Main Menu", callback_data="cmd:main_menu")]
-            ]
-            await update.message.reply_text(f"🌟 *{messages['categories_prompt']}* 🌟", reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown")
-        elif step == "public":
-            context.user_data["public"] = text.lower() in ["yes", "y"]
-            data = [str(chat_id), context.user_data["company"], context.user_data["phone"], context.user_data["email"],
-                    context.user_data["description"], context.user_data["manager"], ",".join(context.user_data.get("categories", [])), datetime.now().isoformat(), "Yes" if context.user_data["public"] else "No"]
-            network_sheet.append_row(data)
-            await update.message.reply_text(f"🌟 *Registered {data[1]} in the network!* 🌟", parse_mode="Markdown", reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Back to Main Menu", callback_data="cmd:main_menu")]]))
-            del context.user_data["register_step"]
-    elif "quiz_step" in context.user_data:
-        step = context.user_data["quiz_step"]
-        module_id = context.user_data["quiz_module"]
-        module = next(m for m in TRAINING_MODULES if m["id"] == module_id)
-        question = module["quiz"][step - 1]
-        keyboard = [[InlineKeyboardButton("🔙 Back to Main Menu", callback_data="cmd:main_menu")]]
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        if text.lower() == question["answer"].lower():
-            await update.message.reply_text(f"🌟 *{messages['quiz_correct'].format(explain=question['explain'])}* 🌟", parse_mode="Markdown", reply_markup=reply_markup)
-            context.user_data["quiz_score"] = context.user_data.get("quiz_score", 0) + 1
-        else:
-            await update.message.reply_text(f"🌟 *{messages['quiz_wrong'].format(answer=question['answer'], explain=question['explain'])}* 🌟", parse_mode="Markdown", reply_markup=reply_markup)
-        if step < len(module["quiz"]):
-            context.user_data["quiz_step"] += 1
-            next_q = module["quiz"][step]
-            keyboard = [[InlineKeyboardButton(opt, callback_data=f"quiz:{opt}")] for opt in next_q["options"]]
-            keyboard.append([InlineKeyboardButton("🔙 Back to Main Menu", callback_data="cmd:main_menu")])
-            await update.message.reply_text(f"🌟 *{messages['quiz_question'].format(num=step + 1, q=next_q['q'])}* 🌟", reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown")
-        else:
-            score = context.user_data.get("quiz_score", 0)
-            context.user_data["completed_modules"] = context.user_data.get("completed_modules", []) + [module_id]
-            await update.message.reply_text(f"🌟 *{messages['quiz_done'].format(score=score, total=len(module['quiz']))}* 🌟", parse_mode="Markdown", reply_markup=reply_markup)
-            del context.user_data["quiz_step"]
-            del context.user_data["quiz_score"]
-    elif "profile_step" in context.user_data:
-        step = context.user_data["profile_step"]
+    if step == "username":
+        context.user_data["username"] = text
+        context.user_data["register_step"] = "name"
+        await update.message.reply_text(f"🌟 *{messages['signup_prompt']}* 🌟", parse_mode="Markdown")
+    elif step == "name":
+        context.user_data["name"] = text
+        context.user_data["register_step"] = "phone"
+        await update.message.reply_text(f"🌟 *{messages['phone_prompt']}* 🌟", parse_mode="Markdown")
+    elif step == "phone":
+        context.user_data["phone"] = text
+        context.user_data["register_step"] = "email"
+        await update.message.reply_text(f"🌟 *{messages['email_prompt']}* 🌟", parse_mode="Markdown")
+    elif step == "email":
+        context.user_data["email"] = text
+        context.user_data["register_step"] = "company"
+        await update.message.reply_text(f"🌟 *{messages['company_prompt']}* 🌟", parse_mode="Markdown")
+    elif step == "company":
+        context.user_data["company"] = text
+        context.user_data["register_step"] = "description"
+        await update.message.reply_text(f"🌟 *{messages['description_prompt']}* 🌟", parse_mode="Markdown")
+    elif step == "description":
+        context.user_data["description"] = text
+        user_data = context.user_data
+        users_sheet.append_row([username, user_data["name"], user_data["phone"], user_data["email"], user_data["company"], user_data["description"], str(user_data["chat_id"]), datetime.now().isoformat(), "Pending"])
+        await update.message.reply_text(f"🌟 *{messages['signup_thanks'].format(name=user_data['name'])}* 🌟", parse_mode="Markdown")
+        await context.bot.send_message(chat_id=MANAGER_CHAT_ID, text=f"New registration:\nUsername: {username}\nName: {user_data['name']}\nPhone: {user_data['phone']}\nEmail: {user_data['email']}\nCompany: {user_data['company']}\nDescription: {user_data['description']}", reply_markup=InlineKeyboardMarkup([
+            [InlineKeyboardButton("Approve", callback_data=f"approve:{username}"), InlineKeyboardButton("Deny", callback_data=f"deny:{username}")]
+        ]))
+        del context.user_data["register_step"]
+    elif step in ["name", "phone", "email", "company"]:
+        field = step
         cell = users_sheet.find(username)
-        keyboard = [[InlineKeyboardButton("🔙 Back to Main Menu", callback_data="cmd:main_menu")]]
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        if cell:
-            row = cell.row
-            if step == "name":
-                users_sheet.update_cell(row, 2, text)
-            elif step == "phone":
-                users_sheet.update_cell(row, 3, text)
-            elif step == "email":
-                users_sheet.update_cell(row, 4, text)
-            elif step == "company":
-                users_sheet.update_cell(row, 5, text)
-            await update.message.reply_text(f"🌟 *{messages['profile_updated']}* 🌟", parse_mode="Markdown", reply_markup=reply_markup)
-            del context.user_data["profile_step"]
+        col = {"name": 2, "phone": 3, "email": 4, "company": 5}[field]
+        users_sheet.update_cell(cell.row, col, text)
+        await update.message.reply_text(f"🌟 *{messages['profile_updated']}* 🌟", parse_mode="Markdown", reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Back to Main Menu", callback_data="cmd:main_menu")]]))
+        del context.user_data["profile_step"]
 
 async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
-    await query.answer()
-    username = query.from_user.username
     lang = context.user_data.get("lang", "en")
     messages = MESSAGES[lang]
-    status = get_user_status(username) if username else None
+    username = query.from_user.username
 
-    if not username and "lang:" not in query.data and "approve:" not in query.data and "deny:" not in query.data:
-        await query.edit_message_text("🌟 *Please set a Telegram username in your profile to use this bot.* 🌟", parse_mode="Markdown")
-        return
-
-    if "lang:" in query.data:
-        lang_choice = query.data.split("lang:")[1]
-        context.user_data["lang"] = lang_choice
+    if query.data.startswith("lang:"):
+        lang = query.data.split("lang:")[1]
+        context.user_data["lang"] = lang
         await register_user(update, context)
-    elif "approve:" in query.data:
-        username = query.data.split("approve:")[1]
-        cell = users_sheet.find(username)
-        if cell:
-            users_sheet.update_cell(cell.row, 9, "Approved")
-            user_info = get_user_info(username)
-            lang = context.user_data.get("lang", "en")  # Default to "en" if not set
-            messages = MESSAGES[lang]
-            # Build the main menu keyboard
-            keyboard = [
-                [InlineKeyboardButton(messages["ask"], callback_data="cmd:ask"),
-                 InlineKeyboardButton(messages["resources"], callback_data="cmd:resources")],
-                [InlineKeyboardButton(messages["training_events"], callback_data="cmd:training_events"),
-                 InlineKeyboardButton(messages["networking"], callback_data="cmd:networking")],
-                [InlineKeyboardButton(messages["news"], callback_data="cmd:news"),
-                 InlineKeyboardButton(messages["contact"], callback_data="cmd:contact")],
-                [InlineKeyboardButton(messages["subscribenews"], callback_data="cmd:subscribenews"),
-                 InlineKeyboardButton(messages["learn_startup_skills"], callback_data="cmd:learn_startup_skills")],
-                [InlineKeyboardButton(messages["update_profile"], callback_data="cmd:update_profile")]
-            ]
-            # Send the menu directly to the user
-            await context.bot.send_message(
-                user_info["chat_id"],
-                f"🌟 *{messages['approved_message']}* 🌟\n\n{messages['options']}",
-                parse_mode="Markdown",
-                reply_markup=InlineKeyboardMarkup(keyboard)
-            )
-            await query.edit_message_text(f"User {username} approved!", parse_mode="Markdown")
-    elif "deny:" in query.data:
-        username = query.data.split("deny:")[1]
-        cell = users_sheet.find(username)
-        if cell:
-            users_sheet.update_cell(cell.row, 9, "Denied")
-            user_info = get_user_info(username)
-            await context.bot.send_message(user_info["chat_id"], f"🌟 *{messages['denied_message']}* 🌟", parse_mode="Markdown")
-            await query.edit_message_text(f"User {username} denied!", parse_mode="Markdown")
-    elif "cmd:" in query.data:
-        cmd = query.data.split("cmd:")[1]
-        handlers = {
-            "cancel": lambda u, c: query.edit_message_text(f"🌟 *Registration cancelled.* 🌟", parse_mode="Markdown"),
-            "main_menu": lambda u, c: show_options(u, c, lang),
-            "ask": ask,
-            "ask_again": ask,
-            "resources": resources,
-            "training_events": training_events,
-            "signup": signup,
-            "networking": networking,
-            "register": register,
-            "news": news,
-            "contact": contact,
-            "subscribenews": subscribenews,
-            "learn_startup_skills": learn_startup_skills,
-            "update_profile": update_profile,
-            "all_resources": lambda u, c: all_resources(u, c, lang),
-        }
-        if cmd in handlers:
-            await handlers[cmd](update, context)
-            if cmd == "cancel":
-                del context.user_data["register_step"]
+    elif query.data == "cmd:ask":
+        await ask(update, context)
+    elif query.data == "cmd:ask_again":
+        await ask(update, context)
+    elif query.data == "cmd:resources":
+        await resources(update, context)
+    elif query.data == "cmd:training_events":
+        await training_events(update, context)
+    elif query.data == "cmd:signup":
+        await signup(update, context)
+    elif query.data == "cmd:networking":
+        await networking(update, context)
+    elif query.data == "cmd:register":
+        await register(update, context)
+    elif query.data == "cmd:news":
+        await news(update, context)
+    elif query.data == "cmd:contact":
+        await contact(update, context)
+    elif query.data == "cmd:subscribenews":
+        await subscribenews(update, context)
+    elif query.data == "cmd:learn_startup_skills":
+        await learn_startup_skills(update, context)
+    elif query.data == "cmd:update_profile":
+        await update_profile(update, context)
+    elif query.data == "cmd:main_menu":
+        await show_options(update, context, lang)
+    elif query.data.startswith("approve:"):
+        username_to_approve = query.data.split("approve:")[1]
+        cell = users_sheet.find(username_to_approve)
+        users_sheet.update_cell(cell.row, 9, "Approved")
+        chat_id = users_sheet.cell(cell.row, 7).value
+        await context.bot.send_message(chat_id=chat_id, text=f"🌟 *{messages['approved_message']}* 🌟", parse_mode="Markdown")
+        await query.edit_message_text(f"Approved {username_to_approve}")
+    elif query.data.startswith("deny:"):
+        username_to_deny = query.data.split("deny:")[1]
+        cell = users_sheet.find(username_to_deny)
+        users_sheet.update_cell(cell.row, 9, "Denied")
+        chat_id = users_sheet.cell(cell.row, 7).value
+        await context.bot.send_message(chat_id=chat_id, text=f"🌟 *{messages['denied_message']}* 🌟", parse_mode="Markdown")
+        await query.edit_message_text(f"Denied {username_to_deny}")
     elif "filter:" in query.data:
         filter_type = query.data.split("filter:")[1]
         filtered_trainings = [t for t in PAST_TRAININGS if t.get("video")] if filter_type == "videos" else [t for t in PAST_TRAININGS if t.get("resources")]
-        sections = [f"✨ *{t['name']}* _({t['date']})_\n{'📹 [Watch]({t['video']})' if t.get('video') else ''}{' | ' if t.get('video') and t.get('resources') else ''}{'📄 [Read]({t['resources']})' if t.get('resources') else ''}\n_{t['description']}_" for t in filtered_trainings]
+        sections = [
+            f"✨ *{t['name']}* _({t['date']})_\n"
+            f"{'📹 [Watch]({t['video']})' if t.get('video') else ''}"
+            f"{' | ' if t.get('video') and t.get('resources') else ''}"
+            f"{'📄 [Read]({t['resources']})' if t.get('resources') else ''}"
+            f"\n_{t['description']}_"
+            for t in filtered_trainings
+        ]
         text = f"🌟 *{messages['resources_title']}* 🌟\n\n" + "\n🌟====🌟\n".join(sections)
         keyboard = [
             [InlineKeyboardButton("🎥 Videos Only", callback_data="filter:videos"), InlineKeyboardButton("📜 Docs Only", callback_data="filter:resources")],
@@ -612,7 +514,7 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
         ]
         await query.edit_message_text(text, parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard), disable_web_page_preview=True)
     elif "signup_training:" in query.data:
-             training_name = query.data.split("signup_training:")[1]
+        training_name = query.data.split("signup_training:")[1]
         user_info = get_user_info(username)
         training_sheet.append_row([username, user_info["name"], training_name, datetime.now().isoformat()])
         keyboard = [[InlineKeyboardButton("🔙 Back to Main Menu", callback_data="cmd:main_menu")]]
@@ -662,19 +564,14 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
         field = query.data.split("profile:")[1]
         context.user_data["profile_step"] = field
         await query.message.reply_text(f"🌟 *{messages[f'profile_{field}']}* 🌟", parse_mode="Markdown", reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Back to Main Menu", callback_data="cmd:main_menu")]]))
-    elif "cat:" in query.data:
-        cat = query.data.split("cat:")[1]
-        if cat == "done":
-            context.user_data["register_step"] = "public"
-            await query.edit_message_text(f"🌟 *{messages['public_prompt']}* 🌟", parse_mode="Markdown", reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Back to Main Menu", callback_data="cmd:main_menu")]]))
-        else:
-            context.user_data.setdefault("categories", []).append(cat)
-            await query.edit_message_text(f"🌟 *{messages['cat_added'].format(cat=cat)}* 🌟", parse_mode="Markdown")
 
 async def all_resources(update: Update, context: ContextTypes.DEFAULT_TYPE, lang):
     query = update.callback_query
     messages = MESSAGES[lang]
-    links = [f"📹 *{t['name']}* Video: {t['video']}" if t.get("video") else f"📄 *{t['name']}* Resource: {t['resources']}" for t in PAST_TRAININGS if t.get("video") or t.get("resources")]
+    links = [
+        f"📹 *{t['name']}* Video: {t['video']}" if t.get("video") else f"📄 *{t['name']}* Resource: {t['resources']}"
+        for t in PAST_TRAININGS if t.get("video") or t.get("resources")
+    ]
     text = f"🌟 *All Resources* 🌟\n\n" + "\n".join(links)
     keyboard = [[InlineKeyboardButton("🔙 Back to Main Menu", callback_data="cmd:main_menu")]]
     await query.edit_message_text(text, parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
@@ -686,6 +583,7 @@ def main():
     application.add_handler(CommandHandler("menu", menu))
     application.add_handler(CallbackQueryHandler(button))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_reply))
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_ask))
     application.run_polling()
 
 if __name__ == "__main__":
