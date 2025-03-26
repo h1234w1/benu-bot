@@ -319,21 +319,26 @@ async def resources(update: Update, context: ContextTypes.DEFAULT_TYPE):
     lang = context.user_data.get("lang", "en")
     query = update.callback_query
     messages = MESSAGES[lang]
-    sections = [
-        f"✨ *{t['name']}* _({t['date']})_\n"
-        f"{'📹 [Watch]({t['video']})' if t.get('video') else ''}"
-        f"{' | ' if t.get('video') and t.get('resources') else ''}"
-        f"{'📄 [Read]({t['resources']})' if t.get('resources') else ''}"
-        f"\n_{t['description']}_"
-        for t in PAST_TRAININGS if t.get("video") or t.get("resources")
-    ]
+    sections = []
+    for t in PAST_TRAININGS:
+        if t.get("video") or t.get("resources"):
+            links = []
+            if t.get("video"):
+                links.append(f"📹 [Watch]({t['video']})")
+            if t.get("resources"):
+                links.append(f"📄 [Read]({t['resources']})")
+            section = (
+                f"✨ *{t['name']}* _({t['date']})_\n"
+                f"{' | '.join(links)}\n"
+                f"_{t['description']}_"
+            )
+            sections.append(section)
     text = f"🌟 *{messages['resources_title']}* 🌟\n\n" + "\n🌟====🌟\n".join(sections) if sections else messages["no_resources"]
     keyboard = [
         [InlineKeyboardButton("🎥 Videos Only", callback_data="filter:videos"), InlineKeyboardButton("📜 Docs Only", callback_data="filter:resources")],
         [InlineKeyboardButton("⬇️ Get All Resources", callback_data="cmd:all_resources"), InlineKeyboardButton("🔙 Back to Main Menu", callback_data="cmd:main_menu")]
     ]
     await query.message.reply_text(text, parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard), disable_web_page_preview=True)
-
 async def training_events(update: Update, context: ContextTypes.DEFAULT_TYPE):
     lang = context.user_data.get("lang", "en")
     query = update.callback_query
