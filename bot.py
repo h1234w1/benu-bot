@@ -30,8 +30,8 @@ if not users_sheet.row_values(1):
 scheduler = AsyncIOScheduler()
 scheduler.start()
 
-# Manager’s Telegram ID (your personal ID, flexible to change)
-MANAGER_CHAT_ID = "499281665"  # Replace with new manager ID here if needed
+# Manager’s Telegram ID
+MANAGER_CHAT_ID = "499281665"
 
 # Training data
 UPCOMING_TRAININGS = [
@@ -88,8 +88,8 @@ MESSAGES = {
         "signup_thanks": "ለመመዝገብዎ እናመሰግናለን፣ {name}! እባክዎ ከቡድናችን ማረጋገጫ ይጠብቁ። በቅርቡ ይነገርዎታል።",
         "pending_message": "መመዝገቢያዎ ለማረጋገጫ በመጠባበቅ ላይ ነው። እባክዎ ይጠብቁ።",
         "denied_message": "መመዝገቢዤዎ ተከልክሏል። ለድጋፍ benu@example.com ያግኙ።",
-        "approved_message": "እንኳን ደህና መጡ! መመዝገቢያዎ ተቀባይነት አግኝቷል። መሣሪያዎችንና ሥልጠናዎችን ለመዳሰስ /menu ይጠቀሙ!",
-        "resources_title": "የሚገኙ ሥልጠና መሣሪያዎች:",
+        "approved_message": "እንኳን ደህና መጡ! መመዝገቢዤዎ ተቀባይነት አግኝቷል። መሣሪዤዎችንና ሥልጠናዎችን ለመዳሰስ /menu ይጠቀሙ!",
+        "resources_title": "የሚገኙ ሥልጠና መሣሪዤዎች:",
         "no_resources": "እስካሁን መሣሪዤዎች የሉም።",
         "trainings_past": "ያለፉ ሥልጠና ዝግጅቶች:",
         "trainings_upcoming": "መጪ ሥልጠና ዝግጅቶች:",
@@ -100,18 +100,17 @@ MESSAGES = {
     }
 }
 
-# Helper function to check user status by username
+# Helper functions
 def get_user_status(username):
     try:
         cell = users_sheet.find(username)
         if cell:
             row = users_sheet.row_values(cell.row)
-            return row[8] if len(row) > 8 else "Pending"  # Status in column I (index 8)
+            return row[8] if len(row) > 8 else "Pending"
         return None
     except gspread.exceptions.CellNotFound:
         return None
 
-# Get user info by username
 def get_user_info(username):
     try:
         cell = users_sheet.find(username)
@@ -125,13 +124,13 @@ def get_user_info(username):
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.message.chat_id
     username = update.message.from_user.username
-    context.user_data["chat_id"] = chat_id  # Store chat_id for later use
+    context.user_data["chat_id"] = chat_id
     status = get_user_status(username) if username else None
     lang = context.user_data.get("lang", "en")
     messages = MESSAGES[lang]
 
     if status == "Approved":
-        await show_options(update, context, lang)
+        await show_options_menu(update, context, lang)  # Show menu directly for approved users
     elif status == "Denied":
         await update.message.reply_text(f"🌟 *{messages['denied_message']}* 🌟", parse_mode="Markdown")
     elif status == "Pending":
@@ -150,9 +149,14 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.message.chat_id
     username = update.message.from_user.username
+    context.user_data["chat_id"] = chat_id  # Ensure chat_id is stored
     status = get_user_status(username) if username else None
     lang = context.user_data.get("lang", "en")
     messages = MESSAGES[lang]
+
+    if not username:
+        await update.message.reply_text("🌟 *Please set a Telegram username in your profile to use this bot.* 🌟", parse_mode="Markdown")
+        return
 
     if status == "Approved":
         await show_options_menu(update, context, lang)
@@ -183,6 +187,7 @@ async def show_options(update: Update, context: ContextTypes.DEFAULT_TYPE, lang)
     )
 
 async def show_options_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, lang):
+    context.user_data["lang"] = lang  # Persist language choice
     messages = MESSAGES[lang]
     keyboard = [
         [InlineKeyboardButton(messages["ask"], callback_data="cmd:ask"),
@@ -280,7 +285,7 @@ async def subscribenews(update: Update, context: ContextTypes.DEFAULT_TYPE):
     lang = context.user_data.get("lang", "en")
     query = update.callback_query
     messages = MESSAGES[lang]
-    if training_sheet.find(username) is None:  # Check if already subscribed
+    if training_sheet.find(username) is None:
         user_info = get_user_info(username)
         training_sheet.append_row([username, user_info["name"], "Subscribed to News", datetime.now().isoformat()])
     keyboard = [[InlineKeyboardButton("🔙 Back to Main Menu", callback_data="cmd:main_menu")]]
@@ -315,7 +320,7 @@ async def handle_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
         elif step == "name":
             context.user_data["name"] = text
             context.user_data["register_step"] = "phone"
-            await update.message.reply_text(f"🌟 *{messages['phone_prompt']}* 🌟", parse_mode="Markdown", reply_markup=reply_markup)
+            await update.message.reply_text(f"🌟 *{oordmessages['phone_prompt']}* 🌟", parse_mode="Markdown", reply_markup=reply_markup)
         elif step == "phone":
             context.user_data["phone"] = text
             context.user_data["register_step"] = "email"
@@ -342,7 +347,6 @@ async def handle_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 [InlineKeyboardButton("Approve", callback_data=f"approve:{data[0]}"),
                  InlineKeyboardButton("Deny", callback_data=f"deny:{data[0]}")]
             ]
-            # Send to your personal chat, not the bot
             await context.bot.send_message(MANAGER_CHAT_ID, manager_text, reply_markup=InlineKeyboardMarkup(keyboard))
             del context.user_data["register_step"]
 
@@ -358,21 +362,19 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.edit_message_text("🌟 *Please set a Telegram username in your profile to use this bot.* 🌟", parse_mode="Markdown")
         return
 
-    if status != "Approved" and "lang:" not in query.data and "approve:" not in query.data and "deny:" not in query.data:
-        await query.edit_message_text(f"🌟 *{messages['pending_message' if status == 'Pending' else 'denied_message']}* 🌟", parse_mode="Markdown")
-        return
-
     if "lang:" in query.data:
         lang_choice = query.data.split("lang:")[1]
         context.user_data["lang"] = lang_choice
-        await register_user(update, context)  # Start registration directly
+        await register_user(update, context)
     elif "approve:" in query.data:
         username = query.data.split("approve:")[1]
         cell = users_sheet.find(username)
         if cell:
-            users_sheet.update_cell(cell.row, 9, "Approved")  # Status in column I (index 8)
+            users_sheet.update_cell(cell.row, 9, "Approved")
             user_info = get_user_info(username)
-            await context.bot.send_message(user_info["chat_id"], f"🌟 *{MESSAGES[lang]['approved_message']}* 🌟", parse_mode="Markdown")
+            await context.bot.send_message(user_info["chat_id"], f"🌟 *{messages['approved_message']}* 🌟", parse_mode="Markdown")
+            # Immediately show the menu after approval
+            await show_options_menu(update, context, lang)
             await query.edit_message_text(f"User {username} approved!", parse_mode="Markdown")
     elif "deny:" in query.data:
         username = query.data.split("deny:")[1]
@@ -380,7 +382,7 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if cell:
             users_sheet.update_cell(cell.row, 9, "Denied")
             user_info = get_user_info(username)
-            await context.bot.send_message(user_info["chat_id"], f"🌟 *{MESSAGES[lang]['denied_message']}* 🌟", parse_mode="Markdown")
+            await context.bot.send_message(user_info["chat_id"], f"🌟 *{messages['denied_message']}* 🌟", parse_mode="Markdown")
             await query.edit_message_text(f"User {username} denied!", parse_mode="Markdown")
     elif "cmd:" in query.data:
         cmd = query.data.split("cmd:")[1]
@@ -412,11 +414,12 @@ def main():
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_reply))
     app.add_handler(CallbackQueryHandler(button))
     port = int(os.environ.get("PORT", 8443))
+    # Use fallback URL if RENDER_EXTERNAL_HOSTNAME isn’t set
     app.run_webhook(
         listen="0.0.0.0",
         port=port,
         url_path="/",
-        webhook_url=f"https://{os.environ['RENDER_EXTERNAL_HOSTNAME']}/"
+        webhook_url=f"https://{os.environ.get('RENDER_EXTERNAL_HOSTNAME', 'benu-startup-bot.onrender.com')}/"
     )
     print("Bot is running on Render...")
 
