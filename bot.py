@@ -79,9 +79,9 @@ MESSAGES = {
     "am": {
         "welcome": "እንኳን ወደ ቤኑ ስታርትአፕ ድጋፍ ቦት በደህና መጡ!\nለስታርትአፕ ሥልጠናዎችና መሣሪያዎች መድረስ መጀመሪያ መመዝገብ ይኖርብዎታል። ቋንቋዎን ይምረጡ:\n\nWelcome to Benu’s Startup Support Bot!\nTo access our resources and training for startups, please register first. Select your language:",
         "options": "አማራጭ ይምረጡ:",
-        "username_prompt": "የቴሌግራም ተጠቃሚ ስምዎን ያስገቡ (ለምሳሌ፡ @Beth):",
+        "username_prompt": "የቴሌግራም ተጠቃሚ ስምዎን ያስገቡ (ለምሳሌ፡ @Jondoe):",
         "signup_prompt": "ሙሉ ስምዎን ያስገቡ (ለምሳሌ፡ ጆን ዶኤ):",
-        "phone_prompt": "ስልክ ቁጥርዎን ያስገቡ (ለምሳሌ፡ +251912345678):",
+        "phone_prompt": "ስልክ ቁጥርዎን ያስገቡ (ለምሳሌ፡ +2519xxxxxx78):",
         "email_prompt": "ኢሜልዎን ያስገቡ (ለምሳሌ፡ john.doe@example.com):",
         "company_prompt": "የኩባንያዎን ስም ያስገቡ (ለምሳሌ፡ ዶኤ ቢስኩትስ):",
         "description_prompt": "የኩባንያዎ መግለጫ ያስገቡ (ለምሳሌ፡ ለአካባቢው ገበያ የተጠናከረ ቢስኩት እንሰራለን):",
