@@ -177,7 +177,7 @@ MESSAGES = {
         "signup_thanks": "ለመመዝገብዎ እናመሰግናለን፣ {name}! መመዝገቢያዎ ለማረጋገጫ በመጠባበቅ ላይ ነው።",
         "register_thanks": "{company} በኔትወርክ ውስጥ ተመዝግቧል!",
         "phone_prompt": "እባክዎ ስልክ ቁጥርዎን ያስፈልጋል:",
-        "email_prompt": "እባክዎ ኢሜልዎን ያስፈልጋል:",
+        "email_prompt": "እባክዎ ኢሜልዎ ያስፈልጋል:",
         "company_prompt": "እባክዎ የኩባንያዎን ስም ያስፈልጋል:",
         "description_prompt": "እባክዎ የኩባኒዎ መግለጫ ያስፈልጋል:",
         "manager_prompt": "እባክዎ የሥራ አስኪያጁን ስም ያስፈልጋል:",
