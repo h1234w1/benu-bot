@@ -24,6 +24,9 @@ network_sheet = sheet.worksheet("NetworkingRegistrations")
 scheduler = AsyncIOScheduler()
 scheduler.start()
 
+# Manager’s Telegram ID
+MANAGER_CHAT_ID = "499281665"
+
 # Hugging Face API setup
 HF_API_KEY = os.environ.get("HF_API_KEY")
 HF_API_URL = "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.1"
@@ -140,7 +143,7 @@ MESSAGES = {
         "survey_thanks": "Thank you for your feedback!"
     },
     "am": {
-        "welcome": "እንኳን ወደ ቤኑ ስታርትአፕ ድጋፍ ቦት በደህና መጡ!\nለመመዝገብ ቋንቋዎን ይምረጡ:",
+        "welcome": "እንኳን ወደ ቤኑ ስታርትአፕ ድጋፍ ቦት በደህና መጡ!\nእባክዎ ቋንቋዎን ይምረጡ:",
         "options": "አማራጭ ይምረጡ:",
         "ask": "ጥያቄ ይጠይቁ",
         "resources": "ሥልጠና መሣሪያዎችን ይድረሱ",
@@ -151,12 +154,12 @@ MESSAGES = {
         "subscribenews": "የዜና ዝመናዎች",
         "learn_startup_skills": "የስታርትአፕ ክህሎቶችን ይማሩ",
         "update_profile": "መገለጫ ያሻሽሉ",
-        "ask_prompt": "እባክዎ ጥያቄዎን ይፃፉ፣ መልስ እፈልግልዎታለሁ!",
+        "ask_prompt": "እባክዎ ጥያቄዎን ይፃፉ፣ እኔም መልስ እፈልግልዎታለሁ!",
         "ask_error": "ይቅርታ፣ አሁን መልስ ለመስጠት ችግር አለብኝ። ቆይተው ይሞክሩ!",
-        "resources_title": "የሚገኙ ሥልጠና መሣሪያዎች:",
+        "resources_title": "የሚገኙ ሥልጠና መሣሪዪዎች:",
         "no_resources": "እስካሁን መሣሪያዎች የሉም።",
         "trainings_past": "ያለፉ ሥልጠና ዝግጅቶች:",
-        "trainings_upcoming": "በቅርቡ የሚጀመሩ ስልጠናዎች:",
+        "trainings_upcoming": "መጪ ሥልጠና ዝግጅቶች:",
         "signup_prompt": "እባክዎ ሙሉ ስምዎን ያስፈልጋል:",
         "survey_company_size": "የኩባንያዎ መጠን ምንድን ነው? (ለምሳሌ፡ ትንሽ፣ መካከለኛ፣ ትልቅ):",
         "networking_title": "በምድብ መልክ ኔትወርክ (ቢስኩት እና ግብርና ዘርፍ):",
@@ -169,7 +172,7 @@ MESSAGES = {
         "phone_prompt": "እባክዎ ስልክ ቁጥርዎን ያስፈልጋል:",
         "email_prompt": "እባክዎ ኢሜልዎን ያስፈልጋል:",
         "company_prompt": "እባክዎ የኩባንያዎን ስም ያስፈልጋል:",
-        "description_prompt": "እባክዎ የኩባኒዎ መግለጫ ያስፈልጋል:",
+        "description_prompt": "እባክዎ የኩባኔተዎ መግለጫ ያስፈልጋል:",
         "manager_prompt": "እባክዎ የሥራ አስኪያጁን ስም ያስፈልጋል:",
         "categories_prompt": "ምድቦችን ይምረጡ (ጨርሰዋል የሚለውን ይጫኑ):",
         "public_prompt": "ኢሜልዎን በይፋ ይጋሩ? (አዎ/አይ):",
@@ -193,40 +196,16 @@ MESSAGES = {
     }
 }
 
+# Bot functions
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    chat_id = update.message.chat_id
-    context.user_data["chat_id"] = chat_id
-    lang = context.user_data.get("lang", "en")
     keyboard = [
         [InlineKeyboardButton("English", callback_data="lang:en"),
          InlineKeyboardButton("አማርኛ", callback_data="lang:am")]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     await update.message.reply_text(
-        f"🌟 *{MESSAGES[lang]['welcome']}* 🌟",
-        reply_markup=reply_markup,
-        parse_mode="Markdown"
-    )
-
-async def menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    chat_id = update.message.chat_id
-    context.user_data["chat_id"] = chat_id
-    lang = context.user_data.get("lang", "en")
-    messages = MESSAGES[lang]
-    keyboard = [
-        [InlineKeyboardButton(messages["ask"], callback_data="cmd:ask"),
-         InlineKeyboardButton(messages["resources"], callback_data="cmd:resources")],
-        [InlineKeyboardButton(messages["training_events"], callback_data="cmd:training_events"),
-         InlineKeyboardButton(messages["networking"], callback_data="cmd:networking")],
-        [InlineKeyboardButton(messages["news"], callback_data="cmd:news"),
-         InlineKeyboardButton(messages["contact"], callback_data="cmd:contact")],
-        [InlineKeyboardButton(messages["subscribenews"], callback_data="cmd:subscribenews"),
-         InlineKeyboardButton(messages["learn_startup_skills"], callback_data="cmd:learn_startup_skills")],
-        [InlineKeyboardButton(messages["update_profile"], callback_data="cmd:update_profile")]
-    ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    await update.message.reply_text(
-        f"🌟 *{messages['options']}* 🌟",
+        "🌟 *Welcome to Benu’s Startup Support Bot!* 🌟\nPlease select your language:\n\n"
+        "እንኳን ወደ ቤኑ ስታርትአፕ ድጋፍ ቦት በደህና መጡ!\nእባክዎ ቋንቋዎን ይምረጡ:",
         reply_markup=reply_markup,
         parse_mode="Markdown"
     )
@@ -247,8 +226,8 @@ async def show_options(update: Update, context: ContextTypes.DEFAULT_TYPE, lang)
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     await update.callback_query.edit_message_text(
-        f"🌟 *{messages['options']}* 🌟",
-        reply_markup=reply_markup,
+        f"🌟 *{messages['options']}* 🌟", 
+        reply_markup=reply_markup, 
         parse_mode="Markdown"
     )
 
@@ -274,14 +253,18 @@ async def handle_ask(update: Update, context: ContextTypes.DEFAULT_TYPE):
             payload = {
                 "inputs": f"You are a helpful AI for startup founders. {question}",
                 "parameters": {
-                    "max_new_tokens": 200,
+                    "max_new_tokens": 100,
                     "temperature": 0.7,
                     "return_full_text": False
                 }
             }
+            print(f"Sending to HF: {json.dumps(payload)}")
             response = requests.post(HF_API_URL, json=payload, headers=headers, timeout=10)
+            print(f"Response status: {response.status_code}")
+            print(f"Response body: {response.text}")
             response.raise_for_status()
             answer = response.json()[0]["generated_text"].strip()
+
             formatted_answer = (
                 f"🌟 *Your Answer* 🌟\n"
                 f"➡️ *Question:* {question}\n"
@@ -314,6 +297,7 @@ async def resources(update: Update, context: ContextTypes.DEFAULT_TYPE):
     lang = context.user_data.get("lang", "en")
     query = update.callback_query
     messages = MESSAGES[lang]
+
     sections = []
     for training in PAST_TRAININGS:
         links = []
@@ -327,23 +311,34 @@ async def resources(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"_{training['description']}_"
         )
         sections.append(section)
-    formatted_text = (
-        f"🌟 *{messages['resources_title']}* 🌟\n\n" +
-        "\n🌟====🌟\n".join(sections) if sections else f"🌟 *{messages['resources_title']}* 🌟\n{messages['no_resources']}"
-    )
+
+    if sections:
+        formatted_text = (
+            f"🌟 *{messages['resources_title']}* 🌟\n\n" +
+            "\n🌟====🌟\n".join(sections)
+        )
+    else:
+        formatted_text = f"🌟 *{messages['resources_title']}* 🌟\n{messages['no_resources']}"
+
     keyboard = [
-        [InlineKeyboardButton("🎥 Videos Only", callback_data="filter:videos"),
-         InlineKeyboardButton("📜 Docs Only", callback_data="filter:resources")],
-        [InlineKeyboardButton("⬇️ Get All Resources", callback_data="cmd:all_resources"),
-         InlineKeyboardButton("🔙 Back to Main Menu", callback_data="cmd:main_menu")]
+        [
+            InlineKeyboardButton("🎥 Videos Only", callback_data="filter:videos"),
+            InlineKeyboardButton("📜 Docs Only", callback_data="filter:resources")
+        ],
+        [
+            InlineKeyboardButton("⬇️ Get All Resources", callback_data="cmd:all_resources"),
+            InlineKeyboardButton("🔙 Back to Main Menu", callback_data="cmd:main_menu")
+        ]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
+
     await query.message.reply_text(formatted_text, parse_mode="Markdown", reply_markup=reply_markup, disable_web_page_preview=True)
 
 async def training_events(update: Update, context: ContextTypes.DEFAULT_TYPE):
     lang = context.user_data.get("lang", "en")
     query = update.callback_query
     messages = MESSAGES[lang]
+
     past_sections = [
         f"🌟 *{t['name']}* _({t['date']})_\n_{t['description']}_"
         for t in PAST_TRAININGS
@@ -352,16 +347,21 @@ async def training_events(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"🌟 *{messages['trainings_past']}* 🌟\n\n" +
         "\n-----\n".join(past_sections)
     )
+
     upcoming_text = (
         f"✨ *{messages['trainings_upcoming']}* ✨\n\n" +
         "\n".join(f"📅 *{t['name']}* _({t['date']})_" for t in UPCOMING_TRAININGS)
     )
+
     keyboard = [
-        [InlineKeyboardButton("📚 Resources", callback_data="cmd:resources"),
-         InlineKeyboardButton("✍️ Sign Up", callback_data="cmd:signup")],
+        [
+            InlineKeyboardButton("📚 Resources", callback_data="cmd:resources"),
+            InlineKeyboardButton("✍️ Sign Up", callback_data="cmd:signup")
+        ],
         [InlineKeyboardButton("🔙 Back to Main Menu", callback_data="cmd:main_menu")]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
+
     await query.message.reply_text(
         f"{past_text}\n\n{upcoming_text}",
         parse_mode="Markdown",
@@ -375,8 +375,8 @@ async def signup(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [[InlineKeyboardButton("🔙 Back to Main Menu", callback_data="cmd:main_menu")]]
     reply_markup = InlineKeyboardMarkup(keyboard)
     await update.message.reply_text(
-        f"🌟 *{MESSAGES[lang]['signup_prompt']}* 🌟",
-        parse_mode="Markdown",
+        f"🌟 *{MESSAGES[lang]['signup_prompt']}* 🌟", 
+        parse_mode="Markdown", 
         reply_markup=reply_markup
     )
 
@@ -384,6 +384,7 @@ async def networking(update: Update, context: ContextTypes.DEFAULT_TYPE):
     lang = context.user_data.get("lang", "en")
     query = update.callback_query
     messages = MESSAGES[lang]
+    
     network_companies = {
         "Biscuit Production": [
             {"name": "EthioBiscuit Co.", "description": "Produces fortified biscuits", "contact": "+251912345678"},
@@ -399,11 +400,9 @@ async def networking(update: Update, context: ContextTypes.DEFAULT_TYPE):
         for cat in entry["Categories"].split(","):
             if cat not in network_companies:
                 network_companies[cat] = []
-            network_companies[cat].append({
-                "name": entry["Company"],
-                "description": entry["Description"],
-                "contact": entry["Phone"] if entry["PublicEmail"] == "Yes" else "Private"
-            })
+            network_companies[cat].append({"name": entry["Company"], "description": entry["Description"],
+                                           "contact": entry["Phone"] if entry["PublicEmail"] == "Yes" else "Private"})
+
     sections = []
     for cat, companies in network_companies.items():
         cat_section = (
@@ -414,15 +413,18 @@ async def networking(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
         )
         sections.append(cat_section)
+
     text = (
         f"🌟 *{messages['networking_title']}* 🌟\n\n" +
         "\n🌟----🌟\n".join(sections)
     )
+    
     keyboard = [
         [InlineKeyboardButton("📝 Register", callback_data="cmd:register")],
         [InlineKeyboardButton("🔙 Back to Main Menu", callback_data="cmd:main_menu")]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
+    
     await query.message.reply_text(text, parse_mode="Markdown", reply_markup=reply_markup)
 
 async def register(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -432,8 +434,8 @@ async def register(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [[InlineKeyboardButton("🔙 Back to Main Menu", callback_data="cmd:main_menu")]]
     reply_markup = InlineKeyboardMarkup(keyboard)
     await update.message.reply_text(
-        f"🌟 *{MESSAGES[lang]['register_prompt']}* 🌟",
-        parse_mode="Markdown",
+        f"🌟 *{MESSAGES[lang]['register_prompt']}* 🌟", 
+        parse_mode="Markdown", 
         reply_markup=reply_markup
     )
 
@@ -441,35 +443,42 @@ async def news(update: Update, context: ContextTypes.DEFAULT_TYPE):
     lang = context.user_data.get("lang", "en")
     query = update.callback_query
     messages = MESSAGES[lang]
+    
     news_items = [
         "🌟 *March 12, 2025*: _Benu secured ETB 2.9M from SWR Ethiopia._",
         "🌟 *April 10, 2025*: _First training held—29 saleswomen trained! See /training_events._",
         "🌟 *May 2025*: _New production line launches._",
         "🌟 *May 15, 2025*: _Networking Event—register at /networking or /training_events._"
     ]
+    
     text = (
         f"🌟 *{messages['news_title']}* 🌟\n\n" +
         "\n".join(news_items)
     )
+    
     keyboard = [
         [InlineKeyboardButton("🔔 Subscribe", callback_data="cmd:subscribenews")],
         [InlineKeyboardButton("🔙 Back to Main Menu", callback_data="cmd:main_menu")]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
+    
     await query.message.reply_text(text, parse_mode="Markdown", reply_markup=reply_markup)
 
 async def contact(update: Update, context: ContextTypes.DEFAULT_TYPE):
     lang = context.user_data.get("lang", "en")
     query = update.callback_query
     messages = MESSAGES[lang]
+    
     text = (
         f"🌟 *{messages['contact_info'].split(':')[0]}* 🌟\n\n"
         f"✉️ *Email:* benu@example.com\n"
         f"📞 *Phone:* +251921756683\n"
         f"🏢 *Address:* Addis Ababa, Bole Sub city, Woreda 03, H.N. 4/10/A5/FL8"
     )
+    
     keyboard = [[InlineKeyboardButton("🔙 Back to Main Menu", callback_data="cmd:main_menu")]]
     reply_markup = InlineKeyboardMarkup(keyboard)
+    
     await query.message.reply_text(text, parse_mode="Markdown", reply_markup=reply_markup)
 
 async def subscribenews(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -481,8 +490,8 @@ async def subscribenews(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [[InlineKeyboardButton("🔙 Back to Main Menu", callback_data="cmd:main_menu")]]
     reply_markup = InlineKeyboardMarkup(keyboard)
     await query.message.reply_text(
-        f"🌟 *{MESSAGES[lang]['subscribed']}* 🌟",
-        parse_mode="Markdown",
+        f"🌟 *{MESSAGES[lang]['subscribed']}* 🌟", 
+        parse_mode="Markdown", 
         reply_markup=reply_markup
     )
 
@@ -495,10 +504,9 @@ async def learn_startup_skills(update: Update, context: ContextTypes.DEFAULT_TYP
         for m in TRAINING_MODULES
     ]
     keyboard.append([InlineKeyboardButton("🔙 Back to Main Menu", callback_data="cmd:main_menu")])
-    reply_markup = InlineKeyboardMarkup(keyboard)
     await query.message.reply_text(
-        f"🌟 *{messages['modules_title']}* 🌟",
-        reply_markup=reply_markup,
+        f"🌟 *{messages['modules_title']}* 🌟", 
+        reply_markup=InlineKeyboardMarkup(keyboard), 
         parse_mode="Markdown"
     )
 
@@ -513,10 +521,9 @@ async def update_profile(update: Update, context: ContextTypes.DEFAULT_TYPE):
          InlineKeyboardButton("Company", callback_data="profile:company")],
         [InlineKeyboardButton("🔙 Back to Main Menu", callback_data="cmd:main_menu")]
     ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
     await query.message.reply_text(
-        f"🌟 *{messages['profile_prompt']}* 🌟",
-        reply_markup=reply_markup,
+        f"🌟 *{messages['profile_prompt']}* 🌟", 
+        reply_markup=InlineKeyboardMarkup(keyboard), 
         parse_mode="Markdown"
     )
 
@@ -524,8 +531,7 @@ async def handle_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.message.chat_id
     text = update.message.text
     lang = context.user_data.get("lang", "en")
-    messages = MESSAGES[lang]
-    
+
     if "asking" in context.user_data:
         await handle_ask(update, context)
     elif "signup_step" in context.user_data:
@@ -535,36 +541,26 @@ async def handle_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if step == "name":
             context.user_data["name"] = text
             context.user_data["signup_step"] = "phone"
-            await update.message.reply_text(
-                f"🌟 *{messages['phone_prompt']}* 🌟",
-                parse_mode="Markdown",
-                reply_markup=reply_markup
-            )
+            await update.message.reply_text(f"🌟 *{MESSAGES[lang]['phone_prompt']}* 🌟", parse_mode="Markdown", reply_markup=reply_markup)
         elif step == "phone":
             context.user_data["phone"] = text
             context.user_data["signup_step"] = "email"
-            await update.message.reply_text(
-                f"🌟 *{messages['email_prompt']}* 🌟",
-                parse_mode="Markdown",
-                reply_markup=reply_markup
-            )
+            await update.message.reply_text(f"🌟 *{MESSAGES[lang]['email_prompt']}* 🌟", parse_mode="Markdown", reply_markup=reply_markup)
         elif step == "email":
             context.user_data["email"] = text
             context.user_data["signup_step"] = "company"
-            await update.message.reply_text(
-                f"🌟 *{messages['company_prompt']}* 🌟",
-                parse_mode="Markdown",
-                reply_markup=reply_markup
-            )
+            await update.message.reply_text(f"🌟 *{MESSAGES[lang]['company_prompt']}* 🌟", parse_mode="Markdown", reply_markup=reply_markup)
         elif step == "company":
             context.user_data["company"] = text
-            data = [str(chat_id), context.user_data["name"], context.user_data["phone"], context.user_data["email"], text, datetime.now().isoformat()]
+            context.user_data["signup_step"] = "survey"
+            await update.message.reply_text(f"🌟 *{MESSAGES[lang]['survey_company_size']}* 🌟", parse_mode="Markdown", reply_markup=reply_markup)
+        elif step == "survey":
+            context.user_data["company_size"] = text
+            data = [str(chat_id), context.user_data["name"], context.user_data["phone"],
+                    context.user_data["email"], context.user_data["company"], datetime.now().isoformat(), text]
             training_sheet.append_row(data)
-            await update.message.reply_text(
-                f"🌟 *{messages['signup_thanks'].format(name=data[1])}* 🌟",
-                parse_mode="Markdown",
-                reply_markup=reply_markup
-            )
+            await context.bot.send_message(MANAGER_CHAT_ID, f"New Signup: {data[1:]}")
+            await update.message.reply_text(f"🌟 *{MESSAGES[lang]['signup_thanks'].format(name=data[1])}* 🌟", parse_mode="Markdown", reply_markup=reply_markup)
             del context.user_data["signup_step"]
     elif "register_step" in context.user_data:
         step = context.user_data["register_step"]
@@ -573,35 +569,19 @@ async def handle_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if step == "company":
             context.user_data["company"] = text
             context.user_data["register_step"] = "phone"
-            await update.message.reply_text(
-                f"🌟 *{messages['phone_prompt']}* 🌟",
-                parse_mode="Markdown",
-                reply_markup=reply_markup
-            )
+            await update.message.reply_text(f"🌟 *{MESSAGES[lang]['phone_prompt']}* 🌟", parse_mode="Markdown", reply_markup=reply_markup)
         elif step == "phone":
             context.user_data["phone"] = text
             context.user_data["register_step"] = "email"
-            await update.message.reply_text(
-                f"🌟 *{messages['email_prompt']}* 🌟",
-                parse_mode="Markdown",
-                reply_markup=reply_markup
-            )
+            await update.message.reply_text(f"🌟 *{MESSAGES[lang]['email_prompt']}* 🌟", parse_mode="Markdown", reply_markup=reply_markup)
         elif step == "email":
             context.user_data["email"] = text
             context.user_data["register_step"] = "description"
-            await update.message.reply_text(
-                f"🌟 *{messages['description_prompt']}* 🌟",
-                parse_mode="Markdown",
-                reply_markup=reply_markup
-            )
+            await update.message.reply_text(f"🌟 *{MESSAGES[lang]['description_prompt']}* 🌟", parse_mode="Markdown", reply_markup=reply_markup)
         elif step == "description":
             context.user_data["description"] = text
             context.user_data["register_step"] = "manager"
-            await update.message.reply_text(
-                f"🌟 *{messages['manager_prompt']}* 🌟",
-                parse_mode="Markdown",
-                reply_markup=reply_markup
-            )
+            await update.message.reply_text(f"🌟 *{MESSAGES[lang]['manager_prompt']}* 🌟", parse_mode="Markdown", reply_markup=reply_markup)
         elif step == "manager":
             context.user_data["manager"] = text
             context.user_data["register_step"] = "categories"
@@ -613,31 +593,16 @@ async def handle_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 [InlineKeyboardButton("Done", callback_data="cat:done")],
                 [InlineKeyboardButton("🔙 Back to Main Menu", callback_data="cmd:main_menu")]
             ]
-            reply_markup = InlineKeyboardMarkup(keyboard)
-            await update.message.reply_text(
-                f"🌟 *{messages['categories_prompt']}* 🌟",
-                reply_markup=reply_markup,
-                parse_mode="Markdown"
-            )
+            await update.message.reply_text(f"🌟 *{MESSAGES[lang]['categories_prompt']}* 🌟", reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown")
         elif step == "public":
             context.user_data["public"] = text.lower() in ["yes", "y"]
-            data = [
-                str(chat_id),
-                context.user_data["company"],
-                context.user_data["phone"],
-                context.user_data["email"],
-                context.user_data["description"],
-                context.user_data["manager"],
-                ",".join(context.user_data.get("categories", [])),
-                datetime.now().isoformat(),
-                "Yes" if context.user_data["public"] else "No"
-            ]
+            data = [str(chat_id), context.user_data["company"], context.user_data["phone"],
+                    context.user_data["email"], context.user_data["description"], context.user_data["manager"],
+                    ",".join(context.user_data.get("categories", [])), datetime.now().isoformat(),
+                    "Yes" if context.user_data["public"] else "No"]
             network_sheet.append_row(data)
-            await update.message.reply_text(
-                f"🌟 *{messages['register_thanks'].format(company=data[1])}* 🌟",
-                parse_mode="Markdown",
-                reply_markup=reply_markup
-            )
+            await context.bot.send_message(MANAGER_CHAT_ID, f"New Network Reg: {data[1:]}")
+            await update.message.reply_text(f"🌟 *{MESSAGES[lang]['register_thanks'].format(company=data[1])}* 🌟", parse_mode="Markdown", reply_markup=reply_markup)
             del context.user_data["register_step"]
     elif "quiz_step" in context.user_data:
         step = context.user_data["quiz_step"]
@@ -647,51 +612,34 @@ async def handle_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
         keyboard = [[InlineKeyboardButton("🔙 Back to Main Menu", callback_data="cmd:main_menu")]]
         reply_markup = InlineKeyboardMarkup(keyboard)
         if text.lower() == question["answer"].lower():
-            await update.message.reply_text(
-                f"🌟 *{messages['quiz_correct'].format(explain=question['explain'])}* 🌟",
-                parse_mode="Markdown",
-                reply_markup=reply_markup
-            )
+            await update.message.reply_text(f"🌟 *{MESSAGES[lang]['quiz_correct'].format(explain=question['explain'])}* 🌟", parse_mode="Markdown", reply_markup=reply_markup)
             context.user_data["quiz_score"] = context.user_data.get("quiz_score", 0) + 1
         else:
-            await update.message.reply_text(
-                f"🌟 *{messages['quiz_wrong'].format(answer=question['answer'], explain=question['explain'])}* 🌟",
-                parse_mode="Markdown",
-                reply_markup=reply_markup
-            )
+            await update.message.reply_text(f"🌟 *{MESSAGES[lang]['quiz_wrong'].format(answer=question['answer'], explain=question['explain'])}* 🌟", parse_mode="Markdown", reply_markup=reply_markup)
         if step < len(module["quiz"]):
             context.user_data["quiz_step"] += 1
             next_q = module["quiz"][step]
             keyboard = [[InlineKeyboardButton(opt, callback_data=f"quiz:{opt}")] for opt in next_q["options"]]
             keyboard.append([InlineKeyboardButton("🔙 Back to Main Menu", callback_data="cmd:main_menu")])
-            reply_markup = InlineKeyboardMarkup(keyboard)
-            await update.message.reply_text(
-                f"🌟 *{messages['quiz_question'].format(num=step + 1, q=next_q['q'])}* 🌟",
-                reply_markup=reply_markup,
-                parse_mode="Markdown"
-            )
+            await update.message.reply_text(f"🌟 *{MESSAGES[lang]['quiz_question'].format(num=step + 1, q=next_q['q'])}* 🌟",
+                                            reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown")
         else:
             score = context.user_data.get("quiz_score", 0)
             context.user_data["completed_modules"] = context.user_data.get("completed_modules", []) + [module_id]
-            await update.message.reply_text(
-                f"🌟 *{messages['quiz_done'].format(score=score, total=len(module['quiz']))}* 🌟",
-                parse_mode="Markdown",
-                reply_markup=reply_markup
-            )
+            await update.message.reply_text(f"🌟 *{MESSAGES[lang]['quiz_done'].format(score=score, total=len(module['quiz']))}* 🌟", parse_mode="Markdown", reply_markup=reply_markup)
             del context.user_data["quiz_step"]
             del context.user_data["quiz_score"]
-            if len(context.user_data["completed_modules"]) == 2 or len(context.user_data["completed_modules"]) == len(TRAINING_MODULES):
-                await update.message.reply_text(
-                    f"🌟 *{messages['survey_satisfaction']}* 🌟",
-                    parse_mode="Markdown",
-                    reply_markup=reply_markup
-                )
+            if len(context.user_data["completed_modules"]) == 2:
+                await update.message.reply_text(f"🌟 *{MESSAGES[lang]['survey_satisfaction']}* 🌟", parse_mode="Markdown", reply_markup=reply_markup)
+                context.user_data["survey_step"] = "mid"
+            elif len(context.user_data["completed_modules"]) == len(TRAINING_MODULES):
+                await update.message.reply_text(f"🌟 *{MESSAGES[lang]['survey_satisfaction']}* 🌟", parse_mode="Markdown", reply_markup=reply_markup)
                 context.user_data["survey_step"] = "end"
     elif "profile_step" in context.user_data:
         step = context.user_data["profile_step"]
+        cell = training_sheet.find(str(chat_id))
         keyboard = [[InlineKeyboardButton("🔙 Back to Main Menu", callback_data="cmd:main_menu")]]
         reply_markup = InlineKeyboardMarkup(keyboard)
-        cell = training_sheet.find(str(chat_id))
         if cell:
             row = cell.row
             if step == "name":
@@ -702,11 +650,7 @@ async def handle_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 training_sheet.update_cell(row, 4, text)
             elif step == "company":
                 training_sheet.update_cell(row, 5, text)
-            await update.message.reply_text(
-                f"🌟 *{messages['profile_updated']}* 🌟",
-                parse_mode="Markdown",
-                reply_markup=reply_markup
-            )
+            await update.message.reply_text(f"🌟 *{MESSAGES[lang]['profile_updated']}* 🌟", parse_mode="Markdown", reply_markup=reply_markup)
             del context.user_data["profile_step"]
     elif "survey_step" in context.user_data:
         keyboard = [[InlineKeyboardButton("🔙 Back to Main Menu", callback_data="cmd:main_menu")]]
@@ -714,30 +658,19 @@ async def handle_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
         try:
             rating = int(text)
             if 1 <= rating <= 5:
-                await update.message.reply_text(
-                    f"🌟 *{messages['survey_thanks']}* 🌟",
-                    parse_mode="Markdown",
-                    reply_markup=reply_markup
-                )
+                await update.message.reply_text(f"🌟 *{MESSAGES[lang]['survey_thanks']}* 🌟", parse_mode="Markdown", reply_markup=reply_markup)
                 del context.user_data["survey_step"]
             else:
-                await update.message.reply_text(
-                    "Please enter a number between 1 and 5.",
-                    reply_markup=reply_markup
-                )
+                await update.message.reply_text("Please enter a number between 1 and 5.", reply_markup=reply_markup)
         except ValueError:
-            await update.message.reply_text(
-                "Please enter a valid number (1-5).",
-                reply_markup=reply_markup
-            )
+            await update.message.reply_text("Please enter a valid number (1-5).", reply_markup=reply_markup)
 
 async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
     lang = context.user_data.get("lang", "en")
-    messages = MESSAGES[lang]
     print(f"Button clicked: {query.data}")
-    
+
     try:
         if "lang:" in query.data:
             lang_choice = query.data.split("lang:")[1]
@@ -764,28 +697,38 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 await handlers[cmd](update, context)
         elif "filter:" in query.data:
             filter_type = query.data.split("filter:")[1]
-            filtered_trainings = [t for t in PAST_TRAININGS if t.get("video")] if filter_type == "videos" else [t for t in PAST_TRAININGS if t.get("resources")]
-            sections = [
-                f"✨ *{t['name']}* _({t['date']})_\n{'📹 [Watch]({t['video']})' if t.get('video') else '📄 [Read]({t['resources']})'}\n_{t['description']}_"
-                for t in filtered_trainings
-            ]
+            filtered_trainings = (
+                [t for t in PAST_TRAININGS if t.get("video")] if filter_type == "videos" else
+                [t for t in PAST_TRAININGS if t.get("resources")]
+            )
+            sections = []
+            for training in filtered_trainings:
+                links = []
+                if training.get("video"):
+                    links.append(f"📹 [Watch]({training['video']})")
+                if training.get("resources"):
+                    links.append(f"📄 [Read]({training['resources']})")
+                section = (
+                    f"✨ *{training['name']}* _({training['date']})_\n"
+                    f"{' | '.join(links)}\n"
+                    f"_{training['description']}_"
+                )
+                sections.append(section)
             formatted_text = (
-                f"🌟 *{messages['resources_title']}* 🌟\n\n" +
+                f"🌟 *{MESSAGES[lang]['resources_title']}* 🌟\n\n" +
                 "\n🌟====🌟\n".join(sections)
             )
             keyboard = [
-                [InlineKeyboardButton("🎥 Videos Only", callback_data="filter:videos"),
-                 InlineKeyboardButton("📜 Docs Only", callback_data="filter:resources")],
-                [InlineKeyboardButton("⬇️ Get All Resources", callback_data="cmd:all_resources"),
-                 InlineKeyboardButton("🔙 Back to Main Menu", callback_data="cmd:main_menu")]
+                [
+                    InlineKeyboardButton("🎥 Videos Only", callback_data="filter:videos"),
+                    InlineKeyboardButton("📜 Docs Only", callback_data="filter:resources")
+                ],
+                [
+                    InlineKeyboardButton("⬇️ Get All Resources", callback_data="cmd:all_resources"),
+                    InlineKeyboardButton("🔙 Back to Main Menu", callback_data="cmd:main_menu")
+                ]
             ]
-            reply_markup = InlineKeyboardMarkup(keyboard)
-            await query.edit_message_text(
-                formatted_text,
-                parse_mode="Markdown",
-                reply_markup=reply_markup,
-                disable_web_page_preview=True
-            )
+            await query.edit_message_text(formatted_text, parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard), disable_web_page_preview=True)
         elif "module:" in query.data:
             module_id = int(query.data.split("module:")[1])
             module = next(m for m in TRAINING_MODULES if m["id"] == module_id)
@@ -793,28 +736,16 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
             keyboard = [[InlineKeyboardButton("🔙 Back to Main Menu", callback_data="cmd:main_menu")]]
             reply_markup = InlineKeyboardMarkup(keyboard)
             if all(prereq in completed for prereq in module["prereq"]):
-                await query.message.reply_text(
-                    f"🌟 *{messages['module_study'].format(name=module['name'], content=module['content'])}* 🌟",
-                    parse_mode="Markdown",
-                    reply_markup=reply_markup
-                )
+                await query.message.reply_text(f"🌟 *{MESSAGES[lang]['module_study'].format(name=module['name'], content=module['content'])}* 🌟", parse_mode="Markdown", reply_markup=reply_markup)
                 keyboard = [[InlineKeyboardButton(opt, callback_data=f"quiz:{opt}")] for opt in module["quiz"][0]["options"]]
                 keyboard.append([InlineKeyboardButton("🔙 Back to Main Menu", callback_data="cmd:main_menu")])
-                reply_markup = InlineKeyboardMarkup(keyboard)
-                await query.message.reply_text(
-                    f"🌟 *{messages['quiz_start'].format(name=module['name'])}* 🌟\n"
-                    f"🌟 *{messages['quiz_question'].format(num=1, q=module['quiz'][0]['q'])}* 🌟",
-                    reply_markup=reply_markup,
-                    parse_mode="Markdown"
-                )
+                await query.message.reply_text(f"🌟 *{MESSAGES[lang]['quiz_start'].format(name=module['name'])}* 🌟", parse_mode="Markdown")
+                await query.message.reply_text(f"🌟 *{MESSAGES[lang]['quiz_question'].format(num=1, q=module['quiz'][0]['q'])}* 🌟",
+                                               reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown")
                 context.user_data["quiz_step"] = 1
                 context.user_data["quiz_module"] = module_id
             else:
-                await query.message.reply_text(
-                    f"🌟 *{messages['prereq_error']}* 🌟",
-                    parse_mode="Markdown",
-                    reply_markup=reply_markup
-                )
+                await query.message.reply_text(f"🌟 *{MESSAGES[lang]['prereq_error']}* 🌟", parse_mode="Markdown", reply_markup=reply_markup)
         elif "quiz:" in query.data:
             answer = query.data.split("quiz:")[1]
             step = context.user_data["quiz_step"]
@@ -824,96 +755,62 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
             keyboard = [[InlineKeyboardButton("🔙 Back to Main Menu", callback_data="cmd:main_menu")]]
             reply_markup = InlineKeyboardMarkup(keyboard)
             if answer == question["answer"]:
-                await query.message.reply_text(
-                    f"🌟 *{messages['quiz_correct'].format(explain=question['explain'])}* 🌟",
-                    parse_mode="Markdown",
-                    reply_markup=reply_markup
-                )
+                await query.message.reply_text(f"🌟 *{MESSAGES[lang]['quiz_correct'].format(explain=question['explain'])}* 🌟", parse_mode="Markdown", reply_markup=reply_markup)
                 context.user_data["quiz_score"] = context.user_data.get("quiz_score", 0) + 1
             else:
-                await query.message.reply_text(
-                    f"🌟 *{messages['quiz_wrong'].format(answer=question['answer'], explain=question['explain'])}* 🌟",
-                    parse_mode="Markdown",
-                    reply_markup=reply_markup
-                )
+                await query.message.reply_text(f"🌟 *{MESSAGES[lang]['quiz_wrong'].format(answer=question['answer'], explain=question['explain'])}* 🌟", parse_mode="Markdown", reply_markup=reply_markup)
             if step < len(module["quiz"]):
                 context.user_data["quiz_step"] += 1
                 next_q = module["quiz"][step]
                 keyboard = [[InlineKeyboardButton(opt, callback_data=f"quiz:{opt}")] for opt in next_q["options"]]
                 keyboard.append([InlineKeyboardButton("🔙 Back to Main Menu", callback_data="cmd:main_menu")])
-                reply_markup = InlineKeyboardMarkup(keyboard)
-                await query.message.reply_text(
-                    f"🌟 *{messages['quiz_question'].format(num=step + 1, q=next_q['q'])}* 🌟",
-                    reply_markup=reply_markup,
-                    parse_mode="Markdown"
-                )
+                await query.message.reply_text(f"🌟 *{MESSAGES[lang]['quiz_question'].format(num=step + 1, q=next_q['q'])}* 🌟",
+                                               reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown")
             else:
                 score = context.user_data.get("quiz_score", 0)
                 context.user_data["completed_modules"] = context.user_data.get("completed_modules", []) + [module_id]
-                await query.message.reply_text(
-                    f"🌟 *{messages['quiz_done'].format(score=score, total=len(module['quiz']))}* 🌟",
-                    parse_mode="Markdown",
-                    reply_markup=reply_markup
-                )
+                await query.message.reply_text(f"🌟 *{MESSAGES[lang]['quiz_done'].format(score=score, total=len(module['quiz']))}* 🌟", parse_mode="Markdown", reply_markup=reply_markup)
                 del context.user_data["quiz_step"]
                 del context.user_data["quiz_score"]
-                if len(context.user_data["completed_modules"]) == 2 or len(context.user_data["completed_modules"]) == len(TRAINING_MODULES):
-                    await query.message.reply_text(
-                        f"🌟 *{messages['survey_satisfaction']}* 🌟",
-                        parse_mode="Markdown",
-                        reply_markup=reply_markup
-                    )
+                if len(context.user_data["completed_modules"]) == 2:
+                    await query.message.reply_text(f"🌟 *{MESSAGES[lang]['survey_satisfaction']}* 🌟", parse_mode="Markdown", reply_markup=reply_markup)
+                    context.user_data["survey_step"] = "mid"
+                elif len(context.user_data["completed_modules"]) == len(TRAINING_MODULES):
+                    await query.message.reply_text(f"🌟 *{MESSAGES[lang]['survey_satisfaction']}* 🌟", parse_mode="Markdown", reply_markup=reply_markup)
                     context.user_data["survey_step"] = "end"
         elif "profile:" in query.data:
             field = query.data.split("profile:")[1]
             context.user_data["profile_step"] = field
             keyboard = [[InlineKeyboardButton("🔙 Back to Main Menu", callback_data="cmd:main_menu")]]
-            reply_markup = InlineKeyboardMarkup(keyboard)
-            await query.message.reply_text(
-                f"🌟 *{messages[f'profile_{field}']}* 🌟",
-                parse_mode="Markdown",
-                reply_markup=reply_markup
-            )
+            await query.message.reply_text(f"🌟 *{MESSAGES[lang][f'profile_{field}']}* 🌟", parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
         elif "cat:" in query.data:
             cat = query.data.split("cat:")[1]
             if cat == "done":
                 context.user_data["register_step"] = "public"
                 keyboard = [[InlineKeyboardButton("🔙 Back to Main Menu", callback_data="cmd:main_menu")]]
-                reply_markup = InlineKeyboardMarkup(keyboard)
-                await query.edit_message_text(
-                    f"🌟 *{messages['public_prompt']}* 🌟",
-                    parse_mode="Markdown",
-                    reply_markup=reply_markup
-                )
+                await query.edit_message_text(f"🌟 *{MESSAGES[lang]['public_prompt']}* 🌟", parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
             else:
                 context.user_data.setdefault("categories", []).append(cat)
-                await query.edit_message_text(
-                    f"🌟 *{messages['cat_added'].format(cat=cat)}* 🌟",
-                    parse_mode="Markdown"
-                )
+                await query.edit_message_text(f"🌟 *{MESSAGES[lang]['cat_added'].format(cat=cat)}* 🌟", parse_mode="Markdown")
     except telegram.error.BadRequest as e:
         print(f"Query error: {str(e)}")
         keyboard = [[InlineKeyboardButton("🔙 Back to Main Menu", callback_data="cmd:main_menu")]]
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        await query.message.reply_text(
-            "Sorry, that button timed out. Please try again!",
-            reply_markup=reply_markup
-        )
+        await query.message.reply_text("Sorry, that button timed out. Please try again!", reply_markup=InlineKeyboardMarkup(keyboard))
 
 async def all_resources(update: Update, context: ContextTypes.DEFAULT_TYPE, lang):
     query = update.callback_query
-    messages = MESSAGES[lang]
-    links = [
-        f"📹 *{t['name']}* Video: {t['video']}" if t.get("video") else f"📄 *{t['name']}* Resource: {t['resources']}"
-        for t in PAST_TRAININGS if t.get("video") or t.get("resources")
-    ]
+    links = []
+    for training in PAST_TRAININGS:
+        if training.get("video"):
+            links.append(f"📹 *{training['name']}* Video: {training['video']}")
+        if training.get("resources"):
+            links.append(f"📄 *{training['name']}* Resource: {training['resources']}")
     keyboard = [[InlineKeyboardButton("🔙 Back to Main Menu", callback_data="cmd:main_menu")]]
-    reply_markup = InlineKeyboardMarkup(keyboard)
     await query.message.reply_text(
         f"🌟 *All Resources* 🌟\n\n" + "\n".join(links),
         parse_mode="Markdown",
         disable_web_page_preview=True,
-        reply_markup=reply_markup
+        reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
 def schedule_notifications(app):
@@ -923,26 +820,18 @@ def schedule_notifications(app):
         if notify_date > datetime.now():
             scheduler.add_job(
                 lambda: notify_training(app, training["name"], training["date"]),
-                "date",
-                run_date=notify_date
+                "date", run_date=notify_date
             )
 
 async def notify_training(app, name, date):
     for row in training_sheet.get_all_records():
         chat_id = row["ChatID"]
         keyboard = [[InlineKeyboardButton("🔙 Back to Main Menu", callback_data="cmd:main_menu")]]
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        await app.bot.send_message(
-            chat_id,
-            f"🌟 Reminder: *{name}* training on _{date}_ is in 7 days! Reply /training_events for details.",
-            parse_mode="Markdown",
-            reply_markup=reply_markup
-        )
+        await app.bot.send_message(chat_id, f"🌟 Reminder: *{name}* training on _{date}_ is in 7 days! Reply /training_events for details.", parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
 
 def main():
     app = Application.builder().token("7910442120:AAFMUhnwTONoyF1xilwRpjWIRCTmGa0den4").build()
     app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("menu", menu))
     app.add_handler(CommandHandler("signup", signup))
     app.add_handler(CommandHandler("register", register))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_reply))
