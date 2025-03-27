@@ -568,70 +568,74 @@ async def handle_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text(f"🌟 *{MESSAGES[lang]['signup_thanks'].format(name=data[1])}* 🌟", parse_mode="Markdown", reply_markup=reply_markup)
             del context.user_data["signup_step"]
         elif "register_step" in context.user_data:
-        step = context.user_data["register_step"]
-        keyboard = [[InlineKeyboardButton("🔙 Back to Main Menu", callback_data="cmd:main_menu")]]
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        if step == "company":
-            context.user_data["company"] = text
-            context.user_data["register_step"] = "phone"
-            await update.message.reply_text(f"🌟 *{MESSAGES[lang]['phone_prompt']}* 🌟", parse_mode="Markdown", reply_markup=reply_markup)
-        elif step == "phone":
-            context.user_data["phone"] = text
-            context.user_data["register_step"] = "email"
-            await update.message.reply_text(f"🌟 *{MESSAGES[lang]['email_prompt']}* 🌟", parse_mode="Markdown", reply_markup=reply_markup)
-        elif step == "description":
-            context.user_data["description"] = text
-            context.user_data["register_step"] = "manager"
-            await update.message.reply_text(f"🌟 *{MESSAGES[lang]['manager_prompt']}* 🌟", parse_mode="Markdown", reply_markup=reply_markup)
-        elif step == "manager":
-            context.user_data["manager"] = text
-            context.user_data["register_step"] = "categories"
-            keyboard = [
-                [InlineKeyboardButton("Biscuit Production", callback_data="cat:Biscuit Production"),
-                 InlineKeyboardButton("Agriculture", callback_data="cat:Agriculture")],
-                [InlineKeyboardButton("Packaging", callback_data="cat:Packaging"),
-                 InlineKeyboardButton("Marketing", callback_data="cat:Marketing")],
-                [InlineKeyboardButton("Done", callback_data="cat:done")],
-                [InlineKeyboardButton("🔙 Back to Main Menu", callback_data="cmd:main_menu")]
-            ]
-            await update.message.reply_text(f"🌟 *{MESSAGES[lang]['categories_prompt']}* 🌟", reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown")
-        elif step == "public":
-            context.user_data["public"] = text.lower() in ["yes", "y"]
-            # Store pending registration instead of writing to sheet
-            reg_data = {
-                "chat_id": str(chat_id),
-                "company": context.user_data["company"],
-                "phone": context.user_data["phone"],
-                "email": context.user_data["email"],
-                "description": context.user_data["description"],
-                "manager": context.user_data["manager"],
-                "categories": ",".join(context.user_data.get("categories", [])),
-                "timestamp": datetime.now().isoformat(),
-                "public": "Yes" if context.user_data["public"] else "No"
-            }
-            reg_id = f"{chat_id}_{reg_data['timestamp']}"
-            context.bot_data["pending_registrations"][reg_id] = reg_data
-            
-            # Notify manager
-            manager_text = (
-                f"New Network Registration Pending Approval:\n"
-                f"Company: {reg_data['company']}\n"
-                f"Phone: {reg_data['phone']}\n"
-                f"Email: {reg_data['email']}\n"
-                f"Description: {reg_data['description']}\n"
-                f"Manager: {reg_data['manager']}\n"
-                f"Categories: {reg_data['categories']}\n"
-                f"Public Email: {reg_data['public']}"
-            )
-            keyboard = [
-                [InlineKeyboardButton("✅ Approve", callback_data=f"approve:{reg_id}"),
-                 InlineKeyboardButton("❌ Reject", callback_data=f"reject:{reg_id}")]
-            ]
-            await context.bot.send_message(MANAGER_CHAT_ID, manager_text, reply_markup=InlineKeyboardMarkup(keyboard))
-            
-            # Notify user
-            await update.message.reply_text(f"🌟 *Registration submitted for approval!* 🌟", parse_mode="Markdown", reply_markup=reply_markup)
-            del context.user_data["register_step"]
+            step = context.user_data["register_step"]
+            keyboard = [[InlineKeyboardButton("🔙 Back to Main Menu", callback_data="cmd:main_menu")]]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            if step == "company":
+                context.user_data["company"] = text
+                context.user_data["register_step"] = "phone"
+                await update.message.reply_text(f"🌟 *{MESSAGES[lang]['phone_prompt']}* 🌟", parse_mode="Markdown", reply_markup=reply_markup)
+            elif step == "phone":
+                context.user_data["phone"] = text
+                context.user_data["register_step"] = "email"
+                await update.message.reply_text(f"🌟 *{MESSAGES[lang]['email_prompt']}* 🌟", parse_mode="Markdown", reply_markup=reply_markup)
+            elif step == "email":
+                context.user_data["email"] = text
+                context.user_data["register_step"] = "description"
+                await update.message.reply_text(f"🌟 *{MESSAGES[lang]['description_prompt']}* 🌟", parse_mode="Markdown", reply_markup=reply_markup)
+            elif step == "description":
+                context.user_data["description"] = text
+                context.user_data["register_step"] = "manager"
+                await update.message.reply_text(f"🌟 *{MESSAGES[lang]['manager_prompt']}* 🌟", parse_mode="Markdown", reply_markup=reply_markup)
+            elif step == "manager":
+                context.user_data["manager"] = text
+                context.user_data["register_step"] = "categories"
+                keyboard = [
+                    [InlineKeyboardButton("Biscuit Production", callback_data="cat:Biscuit Production"),
+                     InlineKeyboardButton("Agriculture", callback_data="cat:Agriculture")],
+                    [InlineKeyboardButton("Packaging", callback_data="cat:Packaging"),
+                     InlineKeyboardButton("Marketing", callback_data="cat:Marketing")],
+                    [InlineKeyboardButton("Done", callback_data="cat:done")],
+                    [InlineKeyboardButton("🔙 Back to Main Menu", callback_data="cmd:main_menu")]
+                ]
+                await update.message.reply_text(f"🌟 *{MESSAGES[lang]['categories_prompt']}* 🌟", reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown")
+            elif step == "public":
+                context.user_data["public"] = text.lower() in ["yes", "y"]
+                # Store pending registration instead of writing to sheet
+                reg_data = {
+                    "chat_id": str(chat_id),
+                    "company": context.user_data["company"],
+                    "phone": context.user_data["phone"],
+                    "email": context.user_data["email"],
+                    "description": context.user_data["description"],
+                    "manager": context.user_data["manager"],
+                    "categories": ",".join(context.user_data.get("categories", [])),
+                    "timestamp": datetime.now().isoformat(),
+                    "public": "Yes" if context.user_data["public"] else "No"
+                }
+                reg_id = f"{chat_id}_{reg_data['timestamp']}"
+                context.bot_data["pending_registrations"][reg_id] = reg_data
+                
+                # Notify manager
+                manager_text = (
+                    f"New Network Registration Pending Approval:\n"
+                    f"Company: {reg_data['company']}\n"
+                    f"Phone: {reg_data['phone']}\n"
+                    f"Email: {reg_data['email']}\n"
+                    f"Description: {reg_data['description']}\n"
+                    f"Manager: {reg_data['manager']}\n"
+                    f"Categories: {reg_data['categories']}\n"
+                    f"Public Email: {reg_data['public']}"
+                )
+                keyboard = [
+                    [InlineKeyboardButton("✅ Approve", callback_data=f"approve:{reg_id}"),
+                     InlineKeyboardButton("❌ Reject", callback_data=f"reject:{reg_id}")]
+                ]
+                await context.bot.send_message(MANAGER_CHAT_ID, manager_text, reply_markup=InlineKeyboardMarkup(keyboard))
+                
+                # Notify user
+                await update.message.reply_text(f"🌟 *Registration submitted for approval!* 🌟", parse_mode="Markdown", reply_markup=reply_markup)
+                del context.user_data["register_step"]
     elif "quiz_step" in context.user_data:
         step = context.user_data["quiz_step"]
         module_id = context.user_data["quiz_module"]
