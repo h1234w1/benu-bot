@@ -24,6 +24,7 @@ client = gspread.authorize(creds)
 sheet = client.open("BenuBotData")
 training_sheet = sheet.worksheet("TrainingSignups")
 network_sheet = sheet.worksheet("NetworkingRegistrations")
+users_sheet = sheet.worksheet("Users")
 
 # Scheduler for notifications
 scheduler = AsyncIOScheduler()
@@ -209,8 +210,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     await update.message.reply_text(
-        "🌟 *Welcome to Benu’s Startup Support Bot!* 🌟\nPlease select your language:\n\n"
-        "እንኳን ወደ ቤኑ ስታርትአፕ ድጋፍ ቦት በደህና መጡ!\nእባክዎ ቋንቋዎን ይምረጡ:",
+        "🌟 *Welcome to Benu’s Startup Support Bot!* 🌟\nPlease select your language to begin registration:\n\n"
+        "እንኳን ወደ ቤኑ ስታርትአፕ ድጋፍ ቦት በደህና መጡ!\nለመመዝገብ ቋንቋዎን ይምረጡ:",
         reply_markup=reply_markup,
         parse_mode="Markdown"
     )
@@ -374,14 +375,14 @@ async def training_events(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 async def signup(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    chat_id = update.message.chat_id
+    chat_id = update.message.chat_id if update.message else update.callback_query.message.chat_id
     lang = context.user_data.get("lang", "en")
-    context.user_data["signup_step"] = "name"
+    context.user_data["signup_step"] = "username"
     keyboard = [[InlineKeyboardButton("🔙 Back to Main Menu", callback_data="cmd:main_menu")]]
     reply_markup = InlineKeyboardMarkup(keyboard)
-    await update.message.reply_text(
-        f"🌟 *{MESSAGES[lang]['signup_prompt']}* 🌟", 
-        parse_mode="Markdown", 
+    await (update.message.reply_text if update.message else update.callback_query.message.reply_text)(
+        f"🌟 *Please provide your username for training signup:* 🌟",
+        parse_mode="Markdown",
         reply_markup=reply_markup
     )
 
@@ -543,30 +544,89 @@ async def handle_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
         step = context.user_data["signup_step"]
         keyboard = [[InlineKeyboardButton("🔙 Back to Main Menu", callback_data="cmd:main_menu")]]
         reply_markup = InlineKeyboardMarkup(keyboard)
-        if step == "name":
+        if step == "username":
+            context.user_data["username"] = text
+            context.user_data["signup_step"] = "name"
+            await update.message.reply_text(f"🌟 *{MESSAGES[lang]['signup_prompt']}* 🌟", parse_mode="Markdown", reply_markup=reply_markup)
+        elif step == "name":
             context.user_data["name"] = text
             context.user_data["signup_step"] = "phone"
             await update.message.reply_text(f"🌟 *{MESSAGES[lang]['phone_prompt']}* 🌟", parse_mode="Markdown", reply_markup=reply_markup)
         elif step == "phone":
             context.user_data["phone"] = text
-            context.user_data["signup_step"] = "email"
+            context.user_data["signup_step"] = "action"
+            keyboard = [
+                [InlineKeyboardButton(t["name"], callback_data=f"train:{t['name']}") for t in UPCOMING_TRAININGS],
+                [InlineKeyboardButton("🔙 Back to Main Menu", callback_data="cmd:main_menu")]
+            ]
+            await update.message.reply_text(f"🌟 *Select a training:* 🌟", reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown")
+        elif step == "action":
+            context.user_data["action"] = text
+            data = [context.user_data["username"], context.user_data["name"], context.user_data["phone"],
+                    text, datetime.now().isoformat()]
+            training_sheet.append_row(data)
+            await context.bot.send_message(MANAGER_CHAT_ID, f"New Training Signup: {data}")
+            await update.message.reply_text(f"🌟 *{MESSAGES[lang]['signup_thanks'].format(name=data[1])}* 🌟", parse_mode="Markdown", reply_markup=reply_markup)
+            del context.user_data["signup_step"]
+    elif "start_register_step" in context.user_data:
+        step = context.user_data["start_register_step"]
+        keyboard = [[InlineKeyboardButton("🔙 Cancel", callback_data="cmd:cancel")]]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        if step == "username":
+            context.user_data["username"] = text
+            context.user_data["start_register_step"] = "name"
+            await update.message.reply_text(f"🌟 *{MESSAGES[lang]['signup_prompt']}* 🌟", parse_mode="Markdown", reply_markup=reply_markup)
+        elif step == "name":
+            context.user_data["name"] = text
+            context.user_data["start_register_step"] = "phone"
+            await update.message.reply_text(f"🌟 *{MESSAGES[lang]['phone_prompt']}* 🌟", parse_mode="Markdown", reply_markup=reply_markup)
+        elif step == "phone":
+            context.user_data["phone"] = text
+            context.user_data["start_register_step"] = "email"
             await update.message.reply_text(f"🌟 *{MESSAGES[lang]['email_prompt']}* 🌟", parse_mode="Markdown", reply_markup=reply_markup)
         elif step == "email":
             context.user_data["email"] = text
-            context.user_data["signup_step"] = "company"
+            context.user_data["start_register_step"] = "company"
             await update.message.reply_text(f"🌟 *{MESSAGES[lang]['company_prompt']}* 🌟", parse_mode="Markdown", reply_markup=reply_markup)
         elif step == "company":
             context.user_data["company"] = text
-            context.user_data["signup_step"] = "survey"
-            await update.message.reply_text(f"🌟 *{MESSAGES[lang]['survey_company_size']}* 🌟", parse_mode="Markdown", reply_markup=reply_markup)
-        elif step == "survey":
-            context.user_data["company_size"] = text
-            data = [str(chat_id), context.user_data["name"], context.user_data["phone"],
-                    context.user_data["email"], context.user_data["company"], datetime.now().isoformat(), text]
-            training_sheet.append_row(data)
-            await context.bot.send_message(MANAGER_CHAT_ID, f"New Signup: {data[1:]}")
-            await update.message.reply_text(f"🌟 *{MESSAGES[lang]['signup_thanks'].format(name=data[1])}* 🌟", parse_mode="Markdown", reply_markup=reply_markup)
-            del context.user_data["signup_step"]
+            context.user_data["start_register_step"] = "description"
+            await update.message.reply_text(f"🌟 *{MESSAGES[lang]['description_prompt']}* 🌟", parse_mode="Markdown", reply_markup=reply_markup)
+        elif step == "description":
+            context.user_data["description"] = text
+            reg_data = {
+                "chat_id": str(chat_id),
+                "username": context.user_data["username"],
+                "name": context.user_data["name"],
+                "phone": context.user_data["phone"],
+                "email": context.user_data["email"],
+                "company": context.user_data["company"],
+                "description": context.user_data["description"],
+                "timestamp": datetime.now().isoformat(),
+                "status": "Pending"
+            }
+            reg_id = f"{chat_id}_{reg_data['timestamp']}"
+            context.bot_data["pending_registrations"][reg_id] = reg_data
+            
+            # Notify manager
+            manager_text = (
+                f"New User Registration Pending Approval:\n"
+                f"Username: {reg_data['username']}\n"
+                f"Name: {reg_data['name']}\n"
+                f"Phone: {reg_data['phone']}\n"
+                f"Email: {reg_data['email']}\n"
+                f"Company: {reg_data['company']}\n"
+                f"Description: {reg_data['description']}"
+            )
+            keyboard = [
+                [InlineKeyboardButton("✅ Approve", callback_data=f"approve:{reg_id}"),
+                 InlineKeyboardButton("❌ Reject", callback_data=f"reject:{reg_id}")]
+            ]
+            await context.bot.send_message(MANAGER_CHAT_ID, manager_text, reply_markup=InlineKeyboardMarkup(keyboard))
+            
+            # Notify user
+            await update.message.reply_text(f"🌟 *Registration submitted for approval!* 🌟", parse_mode="Markdown", reply_markup=reply_markup)
+            del context.user_data["start_register_step"]        
         elif "register_step" in context.user_data:
             step = context.user_data["register_step"]
             keyboard = [[InlineKeyboardButton("🔙 Back to Main Menu", callback_data="cmd:main_menu")]]
@@ -706,7 +766,15 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         if "lang:" in query.data:
             lang_choice = query.data.split("lang:")[1]
-            await show_options(update, context, lang_choice)
+            context.user_data["lang"] = lang_choice
+            context.user_data["start_register_step"] = "username"
+            keyboard = [[InlineKeyboardButton("🔙 Cancel", callback_data="cmd:cancel")]]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            await query.edit_message_text(
+                f"🌟 *Please provide your username:* 🌟",
+                parse_mode="Markdown",
+                reply_markup=reply_markup
+            )
         elif "cmd:" in query.data:
             cmd = query.data.split("cmd:")[1]
             handlers = {
@@ -723,7 +791,9 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "main_menu": lambda u, c: show_options(u, c, lang),
                 "all_resources": lambda u, c: all_resources(u, c, lang),
                 "signup": signup,
-                "register": register
+                "register": register,
+                "cancel": lambda u, c: cancel_registration(u, c, lang),
+                "start_over": start_over
             }
             if cmd in handlers:
                 await handlers[cmd](update, context)
@@ -824,33 +894,56 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
             else:
                 context.user_data.setdefault("categories", []).append(cat)
                 await query.edit_message_text(f"🌟 *{MESSAGES[lang]['cat_added'].format(cat=cat)}* 🌟", parse_mode="Markdown")
+        elif "train:" in query.data:
+            training = query.data.split("train:")[1]
+            context.user_data["action"] = training
+            data = [context.user_data["username"], context.user_data["name"], context.user_data["phone"],
+                    training, datetime.now().isoformat()]
+            training_sheet.append_row(data)
+            await context.bot.send_message(MANAGER_CHAT_ID, f"New Training Signup: {data}")
+            keyboard = [[InlineKeyboardButton("🔙 Back to Main Menu", callback_data="cmd:main_menu")]]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            await query.edit_message_text(f"🌟 *{MESSAGES[lang]['signup_thanks'].format(name=data[1])}* 🌟", parse_mode="Markdown", reply_markup=reply_markup)
+            del context.user_data["signup_step"]
         elif "approve:" in query.data:
             reg_id = query.data.split("approve:")[1]
-            if query.from_user.id == int(MANAGER_CHAT_ID):  # Ensure only manager can approve
+            if query.from_user.id == int(MANAGER_CHAT_ID):
                 if reg_id in context.bot_data["pending_registrations"]:
                     reg_data = context.bot_data["pending_registrations"].pop(reg_id)
-                    network_sheet.append_row([reg_data["chat_id"], reg_data["company"], reg_data["phone"],
-                                              reg_data["email"], reg_data["description"], reg_data["manager"],
-                                              reg_data["categories"], reg_data["timestamp"], reg_data["public"]])
-                    await query.edit_message_text(f"✅ Approved: {reg_data['company']} added to network!")
-                    keyboard = [[InlineKeyboardButton("🔙 Back to Main Menu", callback_data="cmd:main_menu")]]
-                    reply_markup = InlineKeyboardMarkup(keyboard)
-                    await context.bot.send_message(reg_data["chat_id"], 
-                        f"🌟 *{MESSAGES[lang]['register_thanks'].format(company=reg_data['company'])}* 🌟", 
-                        parse_mode="Markdown", 
-                        reply_markup=reply_markup)
+                    if "username" in reg_data:  # Initial registration
+                        users_sheet.append_row([reg_data["chat_id"], reg_data["username"], reg_data["name"],
+                                                reg_data["phone"], reg_data["email"], reg_data["company"],
+                                                reg_data["description"], reg_data["timestamp"], "Approved"])
+                        await query.edit_message_text(f"✅ Approved: {reg_data['username']} registered!")
+                        keyboard = [[InlineKeyboardButton("🔙 Back to Main Menu", callback_data="cmd:main_menu")]]
+                        reply_markup = InlineKeyboardMarkup(keyboard)
+                        await context.bot.send_message(reg_data["chat_id"],
+                            f"🌟 *Congratulations! You’re registered with BenuBot!* 🌟",
+                            parse_mode="Markdown",
+                            reply_markup=reply_markup)
+                    else:  # Networking registration
+                        network_sheet.append_row([reg_data["chat_id"], reg_data["company"], reg_data["phone"],
+                                                  reg_data["email"], reg_data["description"], reg_data["manager"],
+                                                  reg_data["categories"], reg_data["timestamp"], reg_data["public"]])
+                        await query.edit_message_text(f"✅ Approved: {reg_data['company']} added to network!")
+                        keyboard = [[InlineKeyboardButton("🔙 Back to Main Menu", callback_data="cmd:main_menu")]]
+                        reply_markup = InlineKeyboardMarkup(keyboard)
+                        await context.bot.send_message(reg_data["chat_id"],
+                            f"🌟 *{MESSAGES[lang]['register_thanks'].format(company=reg_data['company'])}* 🌟",
+                            parse_mode="Markdown",
+                            reply_markup=reply_markup)
                 else:
                     await query.edit_message_text("⚠️ Registration no longer pending.")
             else:
                 await query.edit_message_text("⚠️ Only the manager can approve registrations.")
         elif "reject:" in query.data:
             reg_id = query.data.split("reject:")[1]
-            if query.from_user.id == int(MANAGER_CHAT_ID):  # Ensure only manager can reject
+            if query.from_user.id == int(MANAGER_CHAT_ID):
                 if reg_id in context.bot_data["pending_registrations"]:
                     reg_data = context.bot_data["pending_registrations"].pop(reg_id)
-                    await query.edit_message_text(f"❌ Rejected: {reg_data['company']} not added.")
-                    await context.bot.send_message(reg_data["chat_id"], 
-                        "🌟 *Registration rejected by manager.* 🌟", 
+                    await query.edit_message_text(f"❌ Rejected: {reg_data.get('username', reg_data.get('company'))} not added.")
+                    await context.bot.send_message(reg_data["chat_id"],
+                        "🌟 *Registration rejected by manager.* 🌟",
                         parse_mode="Markdown")
                 else:
                     await query.edit_message_text("⚠️ Registration no longer pending.")
@@ -876,6 +969,20 @@ async def all_resources(update: Update, context: ContextTypes.DEFAULT_TYPE, lang
         disable_web_page_preview=True,
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
+
+async def cancel_registration(update: Update, context: ContextTypes.DEFAULT_TYPE, lang):
+    query = update.callback_query
+    del context.user_data["start_register_step"]
+    keyboard = [[InlineKeyboardButton("🔙 Back to Start", callback_data="cmd:start_over")]]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    await query.edit_message_text(
+        f"🌟 *Registration cancelled. Use /start to try again!* 🌟",
+        parse_mode="Markdown",
+        reply_markup=reply_markup
+    )
+
+async def start_over(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await start(update, context)
 
 def schedule_notifications(app):
     for training in UPCOMING_TRAININGS:
