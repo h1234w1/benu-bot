@@ -1,3 +1,4 @@
+```python
 import os
 import json
 import requests
@@ -170,7 +171,7 @@ MESSAGES = {
         "ask_prompt": "እባክዎ ጥያቄዎን ይፃፉ፣ መልስ እፈልግልዎታለሁ!",
         "ask_error": "ይቅርታ፣ አሁን መልስ ለመስጠት ችግር አለብኝ። ቆይተው ይሞክሩ!",
         "resources_title": "የሚገኙ ሥልጠና መሣሪዪዎች:",
-        "no_resources": "እስካሁን መሣሪያዎች የሉም።",
+        "no_resources": "እስካሁን መሣሪዪዎች የሉም።",
         "trainings_past": "ያለፉ ሥልጠና ዝግጅቶች:",
         "trainings_upcoming": "በቅርቡ የሚጀመሩ ስልጠናዎች:",
         "signup_prompt": "እባክዎ ሙሉ ስምዎን ያስፈልጋል:",
@@ -185,7 +186,7 @@ MESSAGES = {
         "phone_prompt": "እባክዎ ስልክ ቁጥርዎን ያስፈልጋል:",
         "email_prompt": "እባክዎ ኢሜልዎን ያስፈልጋል:",
         "company_prompt": "እባክዎ የኩባንያዎን ስም ያስፈልጋል:",
-        "description_prompt": "እባክዎ የኩባኔተዎ መግለጫ ያስፈልጋል:",
+        "description_prompt": "እባክዎ የኩባኒያዎ መግለጫ ያስፈልጋል:",
         "manager_prompt": "እባክዎ የሥራ አስኪያጁን ስም ያስፈልጋል:",
         "categories_prompt": "ምድቦችን ይምረጡ (ጨርሰዋል የሚለውን ይጫኑ):",
         "public_prompt": "ኢሜልዎን በይፋ ይጋሩ? (አዎ/አይ):",
@@ -1145,25 +1146,36 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.message.reply_text("⚠️ An error occurred. Please try again.", parse_mode="Markdown")
 
 def main():
-    application = Application.builder().token(os.environ.get("TELEGRAM_TOKEN")).build()
-    application.bot_data["init"] = init_bot_data(application.bot_data)
-    
-    application.add_handler(CommandHandler("start", start))
-    application.add_handler(CallbackQueryHandler(button))
-    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_reply))
-    
-    external_hostname = os.environ.get("RENDER_EXTERNAL_HOSTNAME")
-    port = int(os.environ.get("PORT", 8443))
-    
-    if external_hostname:
+    try:
+        application = Application.builder().token(os.environ.get("TELEGRAM_TOKEN")).build()
+        init_bot_data(application)
+        application.add_handler(CommandHandler("start", start))
+        application.add_handler(CommandHandler("start_over", start_over))
+        application.add_handler(CallbackQueryHandler(button))
+        application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_reply))
+        
+        # Configure webhook for Render
+        webhook_url = f"https://{os.environ.get('RENDER_EXTERNAL_HOSTNAME')}/bot"
         application.run_webhook(
             listen="0.0.0.0",
-            port=port,
-            url_path="/",
-            webhook_url=f"https://{external_hostname}/"
+            port=int(os.environ.get("PORT", 8443)),
+            url_path="/bot",
+            webhook_url=webhook_url
         )
-    else:
-        application.run_polling()
+    except telegram.error.InvalidToken:
+        print("Invalid TELEGRAM_TOKEN. Please check your environment variable.")
+        raise
+    except Exception as e:
+        print(f"Error starting bot: {str(e)}")
+        raise
 
 if __name__ == "__main__":
     main()
+```
+
+### Explanation of Key Features
+- **Token Retrieval**: The code uses `os.environ.get("TELEGRAM_TOKEN")`, unchanged from prior commits, to fetch the Telegram bot token. The `InvalidToken` error suggests this variable is missing or incorrect in Render.
+- **Networking Registration Flow**:
+  - Users provide a company name, select categories (e.g., Biscuit Production, Agriculture), and reuse phone/email from the `Users` sheet if available, or input new ones.
+  - Registration data is stored in `context.bot_data["pending_registrations"]` and sent to the manager (`MANAGER_CHAT_ID`) for approval/rejection.
+  - Upon approval, data is saved
