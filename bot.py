@@ -200,7 +200,7 @@ MESSAGES = {
         "quiz_done": "ፈተና ተጠናቋል! ነጥብ: {score}/{total}። ቀጣዩ ሞጁል ተከፍቷል።",
         "prereq_error": "እባክዎ ቀደም ሲል ያሉትን ሞጁሎች መጀመሪያ ይጨርሱ።",
         "profile_prompt": "ምን ማሻሻል ይፈልጋሉ?:",
-        "profile_name": "አዲስ ስም:",
+        "profile_name": "ስም:",
         "profile_phone": "አዲስ ስልክ:",
         "profile_email": "አዲስ ኢሜል:",
         "profile_company": "አዲስ ኩባንያ:",
