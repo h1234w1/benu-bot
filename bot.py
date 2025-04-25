@@ -205,7 +205,7 @@ MESSAGES = {
         "profile_email": "አዲስ ኢሜል:",
         "profile_company": "አዲስ ኩባንያ:",
         "profile_updated": "መገለጫ ተሻሽሏል!",
-        "survey_satisfaction": "ሥልጠናው ምን ያህል እንዳረካዎት ይንገሩን? (1-5):",
+        "survey_satisfaction": "ሥልጠናው ምን ያህል እንደሚያረካዎት? (1-5):",
         "survey_thanks": "ለአስተያየትዎ እናመሰግናለን!",
         "network_list_title": "በምድብ የተመዘገቡ ኩባንያዎች:"
     }
@@ -220,7 +220,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     reply_markup = InlineKeyboardMarkup(keyboard)
     await update.message.reply_text(
         "🌟 *Welcome to Benu’s Startup Support Bot!* 🌟\nPlease select your language to begin registration:\n\n"
-        "እንኳን ወደ ቤኑ ስታርትአፕ ድጋፍ ቦት በደህና መጡ!\nለመመዝገብ ቋንቋ ይምረጡ:",
+        "እንኳን ወደ ቤኑ ስታርትአፕ ድጋፍ ቦት በደህና መጡ!\nለመመዝገብ ቋንቋዎን ይምረጡ:",
         reply_markup=reply_markup,
         parse_mode="Markdown"
     )
@@ -1171,11 +1171,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-```
-
-### Explanation of Key Features
-- **Token Retrieval**: The code uses `os.environ.get("TELEGRAM_TOKEN")`, unchanged from prior commits, to fetch the Telegram bot token. The `InvalidToken` error suggests this variable is missing or incorrect in Render.
-- **Networking Registration Flow**:
-  - Users provide a company name, select categories (e.g., Biscuit Production, Agriculture), and reuse phone/email from the `Users` sheet if available, or input new ones.
-  - Registration data is stored in `context.bot_data["pending_registrations"]` and sent to the manager (`MANAGER_CHAT_ID`) for approval/rejection.
-  - Upon approval, data is saved
