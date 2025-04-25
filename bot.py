@@ -205,7 +205,7 @@ MESSAGES = {
         "profile_email": "አዲስ ኢሜል:",
         "profile_company": "አዲስ ኩባንያ:",
         "profile_updated": "መገለጫ ተሻሽሏል!",
-        "survey_satisfaction": "ሥልጠናው ምን ያህል እንደሚያረካዎት? (1-5):",
+        "survey_satisfaction": "ሥልጠናው ምን ያህል እንዳረካዎት ይንገሩን? (1-5):",
         "survey_thanks": "ለአስተያየትዎ እናመሰግናለን!",
         "network_list_title": "በምድብ የተመዘገቡ ኩባንያዎች:"
     }
