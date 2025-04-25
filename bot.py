@@ -220,7 +220,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     reply_markup = InlineKeyboardMarkup(keyboard)
     await update.message.reply_text(
         "🌟 *Welcome to Benu’s Startup Support Bot!* 🌟\nPlease select your language to begin registration:\n\n"
-        "እንኳን ወደ ቤኑ ስታርትአፕ ድጋፍ ቦት በደህና መጡ!\nለመመዝገብ ቋንቋዎን ይምረጡ:",
+        "እንኳን ወደ ቤኑ ስታርትአፕ ድጋፍ ቦት በደህና መጡ!\nለመመዝገብ ቋንቋ ይምረጡ:",
         reply_markup=reply_markup,
         parse_mode="Markdown"
     )
