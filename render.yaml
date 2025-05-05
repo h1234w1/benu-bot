@@ -1,0 +1,20 @@
+services:
+  - type: web
+    name: benu-startup-bot
+    env: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    envVars:
+      - key: TELEGRAM_TOKEN
+        sync: false
+      - key: GOOGLE_CREDENTIALS
+        sync: false
+      - key: HF_API_KEY
+        sync: false
+      - key: PORT
+        value: 8080
+      - key: RENDER_EXTERNAL_HOSTNAME
+        fromService:
+          type: web
+          property: hostname
+    healthCheckPath: /health
