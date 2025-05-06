@@ -649,7 +649,7 @@ async def handle_ask(update: Update, context: ContextTypes.DEFAULT_TYPE):
             reply_markup = InlineKeyboardMarkup(keyboard)
             await update.message.reply_text(formatted_answer, parse_mode="Markdown", reply_markup=reply_markup)
         except Exception as e:
-            print(f"HF API error: {str(e)}")
+            print(f"HF_API error: {str(e)}")
             error_msg = (
                 f"⚠️ *Oops!* ⚠️\n"
                 f"Sorry, I couldn’t fetch an answer right now.\n"
