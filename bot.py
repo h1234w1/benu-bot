@@ -2,7 +2,7 @@ import os
 import json
 import requests
 import re
-from datetime import datetime, timedelta
+from datetime import datetime
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandler, filters, CallbackQueryHandler
 import gspread
@@ -28,7 +28,7 @@ training_sheet = sheet.worksheet("TrainingSignups")
 network_sheet = sheet.worksheet("NetworkingRegistrations")
 users_sheet = sheet.worksheet("Users")
 collab_sheet = sheet.worksheet("Collaborations")
-companies_sheet = sheet.worksheet("Companies")  # Create this sheet manually
+companies_sheet = sheet.worksheet("Companies")
 
 # Scheduler for notifications
 scheduler = AsyncIOScheduler()
@@ -98,8 +98,11 @@ TRAINING_MODULES = [
     }
 ]
 
-# Categories
-CATEGORIES = ["Biscuit Production", "Agriculture", "Packaging", "Marketing", "Logistics", "Finance"]
+# Categories (Benu-specific)
+CATEGORIES = [
+    "Biscuit Production", "Grain Processing", "Food Packaging",
+    "Agricultural Supply", "Marketing & Sales", "Logistics & Distribution", "Other"
+]
 
 # Messages
 MESSAGES = {
@@ -129,14 +132,19 @@ MESSAGES = {
     "subscribed": "Subscribed to news updates!",
     "signup_thanks": "Thanks for signing up, {name}!",
     "register_thanks": "Registered {company} in the network!",
-    "phone_prompt": "Please provide your phone number (Step {step}/7):",
-    "email_prompt": "Please provide your email (Step {step}/7):",
+    "phone_prompt": "Please provide your phone number (Step {step}/{total}):",
+    "email_prompt": "Please provide your email (Step {step}/{total}):",
     "company_prompt": "Please provide your company name (Step 1/7):",
     "description_prompt": "Please provide a description of what your company does (Step 4/7):",
     "manager_prompt": "Please provide the manager’s name (Step 5/7):",
     "categories_prompt": "Select categories (Step 6/7, click Done when finished):",
-    "public_prompt": "Share email publicly? (Step 7/7):",
+    "public_prompt": "Share email publicly? (Step 7/7, reply Yes/No):",
     "cat_added": "Added {cat}. Select more or click Done:",
+    "other_industry": "Please enter your custom industry:",
+    "other_category": "Please enter your custom category:",
+    "confirm_personal": "Please review your information:\nName: {name}\nPhone: {phone}\nEmail: {email}\nIndustries: {industries}\nIs this correct?",
+    "confirm_company": "Please review your information:\nCompany: {company}\nPhone: {phone}\nEmail: {email}\nDescription: {description}\nManager: {manager}\nCategories: {categories}\nPublic Email: {public}\nIs this correct?",
+    "modify_prompt": "Which information would you like to modify?",
     "modules_title": "Startup Skills Modules:",
     "module_study": "Study: {name}\n{content}",
     "quiz_start": "Test your knowledge for {name}:",
@@ -169,13 +177,14 @@ MESSAGES = {
     "network_showcase": "Startup of the Month: {company}\n{description}",
     "personal_name": "Please provide your full name (Step 1/4):",
     "personal_industry": "Select your industry of interest (Step 4/4):",
-    "registration_submitted": "Registration submitted for approval!",
+    "registration_submitted": "Approval requested. You’ll be notified soon!",
     "registration_approved": "Your registration has been approved! Welcome!",
     "registration_rejected": "Your registration was not approved. Please contact support."
 }
 
 # Bot functions
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    context.user_data.clear()  # Clear any previous data
     keyboard = [
         [InlineKeyboardButton("Personal", callback_data="reg:personal"),
          InlineKeyboardButton("Company", callback_data="reg:company")]
@@ -216,6 +225,18 @@ async def show_options(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "🌟 *Awaiting approval.* 🌟\nYou’ll see the main menu once approved.",
             parse_mode="Markdown"
         )
+
+async def cancel_registration(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    context.user_data.clear()
+    keyboard = [
+        [InlineKeyboardButton("Personal", callback_data="reg:personal"),
+         InlineKeyboardButton("Company", callback_data="reg:company")]
+    ]
+    await query.edit_message_text(
+        "🌟 *Registration cancelled. Start over:* 🌟",
+        parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard)
+    )
 
 async def networking(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
@@ -370,9 +391,9 @@ async def network_edit(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "PublicEmail": row[8],
         "Status": row[9]
     }
-    keyboard = [[InlineKeyboardButton("🔙 Back to Networking", callback_data="cmd:networking")]]
+    keyboard = [[InlineKeyboardButton("🔙 Cancel", callback_data="cmd:cancel")]]
     await query.edit_message_text(
-        f"🌟 *{MESSAGES['register_prompt']}* 🌟\nCurrent: {row[1]}",
+        f"🌟 *{MESSAGES['company_prompt']}* 🌟\nCurrent: {row[1]}",
         reply_markup=InlineKeyboardMarkup(keyboard),
         parse_mode="Markdown"
     )
@@ -383,7 +404,7 @@ async def network_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.edit_message_text("⚠️ Manager access only.", parse_mode="Markdown")
         return
     network_data = network_sheet.get_all_records()
-    cat_counts = {cat: 0 for cat in CATEGORIES}
+    cat_counts = {cat: 0 for cat in CATEGORIES if cat != "Other"}
     for entry in network_data:
         for cat in entry["Categories"].split(","):
             if cat in cat_counts:
@@ -447,7 +468,7 @@ async def register(update: Update, context: ContextTypes.DEFAULT_TYPE):
     else:
         context.user_data["register_step"] = "company"
         context.user_data["edit_mode"] = False
-        context.user_data["company_data"] = {}
+        context.user_data["company_data"] = {"Categories": []}
         keyboard = [[InlineKeyboardButton("🔙 Cancel", callback_data="cmd:cancel")]]
         await (update.message.reply_text if update.message else update.callback_query.message.reply_text)(
             f"🌟 *{MESSAGES['company_prompt']}* 🌟", 
@@ -463,14 +484,14 @@ async def handle_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await handle_ask(update, context)
     elif context.user_data.get("personal_step"):
         step = context.user_data["personal_step"]
-        personal_data = context.user_data.setdefault("personal_data", {})
+        personal_data = context.user_data.setdefault("personal_data", {"Industries": []})
         keyboard = [[InlineKeyboardButton("🔙 Cancel", callback_data="cmd:cancel")]]
         reply_markup = InlineKeyboardMarkup(keyboard)
         if step == "name":
             personal_data["Name"] = text
             context.user_data["personal_step"] = "phone"
             await update.message.reply_text(
-                f"🌟 *{MESSAGES['phone_prompt'].format(step=2)}* 🌟",
+                f"🌟 *{MESSAGES['phone_prompt'].format(step=2, total=4)}* 🌟",
                 parse_mode="Markdown", reply_markup=reply_markup)
         elif step == "phone":
             if not re.match(r"\+2519\d{8}$", text):
@@ -481,7 +502,7 @@ async def handle_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
             personal_data["Phone"] = text
             context.user_data["personal_step"] = "email"
             await update.message.reply_text(
-                f"🌟 *{MESSAGES['email_prompt'].format(step=3)}* 🌟",
+                f"🌟 *{MESSAGES['email_prompt'].format(step=3, total=4)}* 🌟",
                 parse_mode="Markdown", reply_markup=reply_markup)
         elif step == "email":
             if not re.match(r"[^@]+@[^@]+\.[^@]+", text):
@@ -498,18 +519,29 @@ async def handle_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 f"🌟 *{MESSAGES['personal_industry']}* 🌟", 
                 reply_markup=InlineKeyboardMarkup(keyboard), 
                 parse_mode="Markdown")
+        elif step == "other_industry":
+            if text.strip():
+                personal_data["Industries"].append(text.strip())
+            context.user_data["personal_step"] = "industry"
+            keyboard = [[InlineKeyboardButton(cat, callback_data=f"ind:{cat}")] for cat in CATEGORIES]
+            keyboard.append([InlineKeyboardButton("Done", callback_data="ind:done")])
+            keyboard.append([InlineKeyboardButton("🔙 Cancel", callback_data="cmd:cancel")])
+            await update.message.reply_text(
+                f"🌟 *{MESSAGES['cat_added'].format(cat=text.strip())}* 🌟\nSelect more or click Done:",
+                parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
     elif context.user_data.get("register_step"):
         step = context.user_data["register_step"]
         edit_mode = context.user_data.get("edit_mode", False)
-        company_data = context.user_data["company_data"]
+        company_data = context.user_data.setdefault("company_data", {"Categories": []})
         keyboard = [[InlineKeyboardButton("🔙 Cancel", callback_data="cmd:cancel")]]
         reply_markup = InlineKeyboardMarkup(keyboard)
         step_count = {"company": 1, "phone": 2, "email": 3, "description": 4, "manager": 5, "categories": 6, "public": 7}
+        total_steps = 7
         if step == "company":
             company_data["Company"] = text
             context.user_data["register_step"] = "phone"
             await update.message.reply_text(
-                f"🌟 *{MESSAGES['phone_prompt'].format(step=2)}* 🌟",
+                f"🌟 *{MESSAGES['phone_prompt'].format(step=2, total=total_steps)}* 🌟",
                 parse_mode="Markdown", reply_markup=reply_markup)
         elif step == "phone":
             if not re.match(r"\+2519\d{8}$", text):
@@ -520,7 +552,7 @@ async def handle_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
             company_data["Phone"] = text
             context.user_data["register_step"] = "email"
             await update.message.reply_text(
-                f"🌟 *{MESSAGES['email_prompt'].format(step=3)}* 🌟",
+                f"🌟 *{MESSAGES['email_prompt'].format(step=3, total=total_steps)}* 🌟",
                 parse_mode="Markdown", reply_markup=reply_markup)
         elif step == "email":
             if not re.match(r"[^@]+@[^@]+\.[^@]+", text):
@@ -543,61 +575,40 @@ async def handle_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
             company_data["Manager"] = text
             context.user_data["register_step"] = "categories"
             keyboard = [[InlineKeyboardButton(cat, callback_data=f"cat:{cat}")] for cat in CATEGORIES]
-            keyboard.append([InlineKeyboardButton("Suggest Category", callback_data="cat:suggest")])
             keyboard.append([InlineKeyboardButton("Done", callback_data="cat:done")])
             keyboard.append([InlineKeyboardButton("🔙 Cancel", callback_data="cmd:cancel")])
             await update.message.reply_text(
                 f"🌟 *{MESSAGES['categories_prompt']}* 🌟", 
-                reply_markup=InlineKeyboardMarkup(keyboard), 
-                parse_mode="Markdown")
+                parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
+        elif step == "other_category":
+            if text.strip():
+                company_data["Categories"].append(text.strip())
+            context.user_data["register_step"] = "categories"
+            keyboard = [[InlineKeyboardButton(cat, callback_data=f"cat:{cat}")] for cat in CATEGORIES]
+            keyboard.append([InlineKeyboardButton("Done", callback_data="cat:done")])
+            keyboard.append([InlineKeyboardButton("🔙 Cancel", callback_data="cmd:cancel")])
+            await update.message.reply_text(
+                f"🌟 *{MESSAGES['cat_added'].format(cat=text.strip())}* 🌟\nSelect more or click Done:",
+                parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
         elif step == "public":
             company_data["PublicEmail"] = "Yes" if text.lower() in ["yes", "y"] else "No"
-            reg_data = {
-                "chat_id": str(chat_id),
-                "type": "company",
-                "company": company_data["Company"],
-                "phone": company_data["Phone"],
-                "email": company_data["Email"],
-                "description": company_data["Description"],
-                "manager": company_data["Manager"],
-                "categories": ",".join(company_data.get("Categories", [])),
-                "reg_date": datetime.now().isoformat(),
-                "public": company_data["PublicEmail"]
-            }
-            reg_id = f"{chat_id}_{reg_data['reg_date']}"
-            context.bot_data["pending_registrations"][reg_id] = reg_data
-            manager_text = (
-                f"New Company Registration Pending Approval:\n"
-                f"Company: {reg_data['company']}\n"
-                f"Phone: {reg_data['phone']}\n"
-                f"Email: {reg_data['email']}\n"
-                f"Description: {reg_data['description']}\n"
-                f"Manager: {reg_data['manager']}\n"
-                f"Categories: {reg_data['categories']}\n"
-                f"Public Email: {reg_data['public']}"
-            )
+            context.user_data["register_step"] = "confirm"
             keyboard = [
-                [InlineKeyboardButton("✅ Approve", callback_data=f"approve:{reg_id}"),
-                 InlineKeyboardButton("❌ Reject", callback_data=f"reject:{reg_id}")]
+                [InlineKeyboardButton("Done", callback_data="confirm:done"),
+                 InlineKeyboardButton("Modify", callback_data="confirm:modify"),
+                 InlineKeyboardButton("🔙 Cancel", callback_data="cmd:cancel")]
             ]
-            await context.bot.send_message(MANAGER_CHAT_ID, manager_text, reply_markup=InlineKeyboardMarkup(keyboard))
-            if edit_mode:
-                row = companies_sheet.find(str(chat_id), in_column=1)
-                if row:
-                    companies_sheet.delete_rows(row.row)
-            companies_sheet.append_row([
-                reg_data["chat_id"], reg_data["company"], reg_data["phone"],
-                reg_data["email"], reg_data["description"], reg_data["manager"],
-                reg_data["categories"], reg_data["reg_date"], reg_data["public"], "Pending"
-            ])
             await update.message.reply_text(
-                f"🌟 *{MESSAGES['registration_submitted']}* 🌟", 
-                parse_mode="Markdown", reply_markup=reply_markup)
-            del context.user_data["register_step"]
-            del context.user_data["company_data"]
-            del context.user_data["edit_mode"]
-            if "Categories" in company_data:
-                del company_data["Categories"]
+                MESSAGES["confirm_company"].format(
+                    company=company_data["Company"],
+                    phone=company_data["Phone"],
+                    email=company_data["Email"],
+                    description=company_data["Description"],
+                    manager=company_data["Manager"],
+                    categories=", ".join(company_data["Categories"]),
+                    public=company_data["PublicEmail"]
+                ),
+                parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
     elif context.user_data.get("network_search"):
         await network_list(update, context, search=text)
         del context.user_data["network_search"]
@@ -751,13 +762,14 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
             context.user_data["reg_type"] = reg_type
             if reg_type == "personal":
                 context.user_data["personal_step"] = "name"
+                context.user_data["personal_data"] = {"Industries": []}
                 keyboard = [[InlineKeyboardButton("🔙 Cancel", callback_data="cmd:cancel")]]
                 await query.edit_message_text(
                     f"🌟 *{MESSAGES['personal_name']}* 🌟",
                     parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
             else:  # company
                 context.user_data["register_step"] = "company"
-                context.user_data["company_data"] = {}
+                context.user_data["company_data"] = {"Categories": []}
                 keyboard = [[InlineKeyboardButton("🔙 Cancel", callback_data="cmd:cancel")]]
                 await query.edit_message_text(
                     f"🌟 *{MESSAGES['company_prompt']}* 🌟",
@@ -766,46 +778,46 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
             ind = query.data.split("ind:")[1]
             personal_data = context.user_data["personal_data"]
             if ind == "done":
-                context.user_data["personal_step"] = None
-                reg_data = {
-                    "chat_id": str(query.message.chat_id),
-                    "type": "personal",
-                    "name": personal_data["Name"],
-                    "phone": personal_data["Phone"],
-                    "email": personal_data["Email"],
-                    "industry": personal_data.get("Industry", ""),
-                    "reg_date": datetime.now().isoformat()
-                }
-                reg_id = f"{reg_data['chat_id']}_{reg_data['reg_date']}"
-                context.bot_data["pending_registrations"][reg_id] = reg_data
-                manager_text = (
-                    f"New Personal Registration Pending Approval:\n"
-                    f"Name: {reg_data['name']}\n"
-                    f"Phone: {reg_data['phone']}\n"
-                    f"Email: {reg_data['email']}\n"
-                    f"Industry: {reg_data['industry']}"
-                )
+                if not personal_data["Industries"]:
+                    keyboard = [[InlineKeyboardButton(cat, callback_data=f"ind:{cat}")] for cat in CATEGORIES]
+                    keyboard.append([InlineKeyboardButton("Done", callback_data="ind:done")])
+                    keyboard.append([InlineKeyboardButton("🔙 Cancel", callback_data="cmd:cancel")])
+                    await query.edit_message_text(
+                        "🌟 *Please select at least one industry.* 🌟",
+                        parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
+                    return
+                context.user_data["personal_step"] = "confirm"
                 keyboard = [
-                    [InlineKeyboardButton("✅ Approve", callback_data=f"approve:{reg_id}"),
-                     InlineKeyboardButton("❌ Reject", callback_data=f"reject:{reg_id}")]
+                    [InlineKeyboardButton("Done", callback_data="confirm:done"),
+                     InlineKeyboardButton("Modify", callback_data="confirm:modify"),
+                     InlineKeyboardButton("🔙 Cancel", callback_data="cmd:cancel")]
                 ]
-                await context.bot.send_message(MANAGER_CHAT_ID, manager_text, reply_markup=InlineKeyboardMarkup(keyboard))
-                users_sheet.append_row([
-                    reg_data["chat_id"], reg_data["name"], reg_data["phone"],
-                    reg_data["email"], reg_data["industry"], reg_data["reg_date"], "Pending"
-                ])
                 await query.edit_message_text(
-                    f"🌟 *{MESSAGES['registration_submitted']}* 🌟",
-                    parse_mode="Markdown")
-                del context.user_data["personal_data"]
-                del context.user_data["personal_step"]
+                    MESSAGES["confirm_personal"].format(
+                        name=personal_data["Name"],
+                        phone=personal_data["Phone"],
+                        email=personal_data["Email"],
+                        industries=", ".join(personal_data["Industries"])
+                    ),
+                    parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
+            elif ind == "Other":
+                context.user_data["personal_step"] = "other_industry"
+                keyboard = [[InlineKeyboardButton("🔙 Cancel", callback_data="cmd:cancel")]]
+                await query.edit_message_text(
+                    f"🌟 *{MESSAGES['other_industry']}* 🌟",
+                    parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
             else:
-                personal_data["Industry"] = ind
+                if ind not in personal_data["Industries"]:
+                    personal_data["Industries"].append(ind)
+                keyboard = [[InlineKeyboardButton(cat, callback_data=f"ind:{cat}")] for cat in CATEGORIES]
+                keyboard.append([InlineKeyboardButton("Done", callback_data="ind:done")])
+                keyboard.append([InlineKeyboardButton("🔙 Cancel", callback_data="cmd:cancel")])
                 await query.edit_message_text(
-                    f"🌟 *Selected: {ind}* 🌟\nSelect more or click Done:",
-                    parse_mode="Markdown")
+                    f"🌟 *{MESSAGES['cat_added'].format(cat=ind)}* 🌟\nSelect more or click Done:",
+                    parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
         elif "cat:" in query.data:
             cat = query.data.split("cat:")[1]
+            company_data = context.user_data["company_data"]
             if cat == "suggest":
                 context.user_data["suggest_cat"] = True
                 keyboard = [[InlineKeyboardButton("🔙 Cancel", callback_data="cmd:cancel")]]
@@ -813,6 +825,14 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     f"🌟 *{MESSAGES['network_suggest_cat']}* 🌟", 
                     parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
             elif cat == "done":
+                if not company_data["Categories"]:
+                    keyboard = [[InlineKeyboardButton(cat, callback_data=f"cat:{cat}")] for cat in CATEGORIES]
+                    keyboard.append([InlineKeyboardButton("Done", callback_data="cat:done")])
+                    keyboard.append([InlineKeyboardButton("🔙 Cancel", callback_data="cmd:cancel")])
+                    await query.edit_message_text(
+                        "🌟 *Please select at least one category.* 🌟",
+                        parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
+                    return
                 context.user_data["register_step"] = "public"
                 keyboard = [
                     [InlineKeyboardButton("Yes", callback_data="public:yes"),
@@ -823,15 +843,173 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     f"🌟 *{MESSAGES['public_prompt']}* 🌟", 
                     reply_markup=InlineKeyboardMarkup(keyboard), 
                     parse_mode="Markdown")
-            else:
-                context.user_data["company_data"].setdefault("Categories", []).append(cat)
+            elif cat == "Other":
+                context.user_data["register_step"] = "other_category"
+                keyboard = [[InlineKeyboardButton("🔙 Cancel", callback_data="cmd:cancel")]]
                 await query.edit_message_text(
-                    f"🌟 *{MESSAGES['cat_added'].format(cat=cat)}* 🌟", 
-                    parse_mode="Markdown")
+                    f"🌟 *{MESSAGES['other_category']}* 🌟",
+                    parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
+            else:
+                if cat not in company_data["Categories"]:
+                    company_data["Categories"].append(cat)
+                keyboard = [[InlineKeyboardButton(cat, callback_data=f"cat:{cat}")] for cat in CATEGORIES]
+                keyboard.append([InlineKeyboardButton("Done", callback_data="cat:done")])
+                keyboard.append([InlineKeyboardButton("🔙 Cancel", callback_data="cmd:cancel")])
+                await query.edit_message_text(
+                    f"🌟 *{MESSAGES['cat_added'].format(cat=cat)}* 🌟\nSelect more or click Done:",
+                    parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
         elif "public:" in query.data:
             choice = query.data.split("public:")[1]
             context.user_data["company_data"]["PublicEmail"] = "Yes" if choice == "yes" else "No"
             await handle_reply(update, context)
+        elif "confirm:" in query.data:
+            action = query.data.split("confirm:")[1]
+            if action == "done":
+                reg_type = context.user_data.get("reg_type")
+                if reg_type == "personal":
+                    personal_data = context.user_data["personal_data"]
+                    reg_data = {
+                        "chat_id": str(query.message.chat_id),
+                        "type": "personal",
+                        "name": personal_data["Name"],
+                        "phone": personal_data["Phone"],
+                        "email": personal_data["Email"],
+                        "industry": ", ".join(personal_data["Industries"]),
+                        "reg_date": datetime.now().isoformat()
+                    }
+                    reg_id = f"{reg_data['chat_id']}_{reg_data['reg_date']}"
+                    context.bot_data["pending_registrations"][reg_id] = reg_data
+                    manager_text = (
+                        f"New Personal Registration Pending Approval:\n"
+                        f"Name: {reg_data['name']}\n"
+                        f"Phone: {reg_data['phone']}\n"
+                        f"Email: {reg_data['email']}\n"
+                        f"Industries: {reg_data['industry']}"
+                    )
+                    keyboard = [
+                        [InlineKeyboardButton("✅ Approve", callback_data=f"approve:{reg_id}"),
+                         InlineKeyboardButton("❌ Reject", callback_data=f"reject:{reg_id}")]
+                    ]
+                    await context.bot.send_message(MANAGER_CHAT_ID, manager_text, reply_markup=InlineKeyboardMarkup(keyboard))
+                    users_sheet.append_row([
+                        reg_data["chat_id"], reg_data["name"], reg_data["phone"],
+                        reg_data["email"], reg_data["industry"], reg_data["reg_date"], "Pending"
+                    ])
+                    await query.edit_message_text(
+                        f"🌟 *{MESSAGES['registration_submitted']}* 🌟",
+                        parse_mode="Markdown")
+                    context.user_data.clear()
+                else:  # company
+                    company_data = context.user_data["company_data"]
+                    reg_data = {
+                        "chat_id": str(query.message.chat_id),
+                        "type": "company",
+                        "company": company_data["Company"],
+                        "phone": company_data["Phone"],
+                        "email": company_data["Email"],
+                        "description": company_data["Description"],
+                        "manager": company_data["Manager"],
+                        "categories": ", ".join(company_data["Categories"]),
+                        "reg_date": datetime.now().isoformat(),
+                        "public": company_data["PublicEmail"]
+                    }
+                    reg_id = f"{reg_data['chat_id']}_{reg_data['reg_date']}"
+                    context.bot_data["pending_registrations"][reg_id] = reg_data
+                    manager_text = (
+                        f"New Company Registration Pending Approval:\n"
+                        f"Company: {reg_data['company']}\n"
+                        f"Phone: {reg_data['phone']}\n"
+                        f"Email: {reg_data['email']}\n"
+                        f"Description: {reg_data['description']}\n"
+                        f"Manager: {reg_data['manager']}\n"
+                        f"Categories: {reg_data['categories']}\n"
+                        f"Public Email: {reg_data['public']}"
+                    )
+                    keyboard = [
+                        [InlineKeyboardButton("✅ Approve", callback_data=f"approve:{reg_id}"),
+                         InlineKeyboardButton("❌ Reject", callback_data=f"reject:{reg_id}")]
+                    ]
+                    await context.bot.send_message(MANAGER_CHAT_ID, manager_text, reply_markup=InlineKeyboardMarkup(keyboard))
+                    if context.user_data.get("edit_mode"):
+                        row = companies_sheet.find(str(query.message.chat_id), in_column=1)
+                        if row:
+                            companies_sheet.delete_rows(row.row)
+                    companies_sheet.append_row([
+                        reg_data["chat_id"], reg_data["company"], reg_data["phone"],
+                        reg_data["email"], reg_data["description"], reg_data["manager"],
+                        reg_data["categories"], reg_data["reg_date"], reg_data["public"], "Pending"
+                    ])
+                    await query.edit_message_text(
+                        f"🌟 *{MESSAGES['registration_submitted']}* 🌟",
+                        parse_mode="Markdown")
+                    context.user_data.clear()
+            elif action == "modify":
+                reg_type = context.user_data.get("reg_type")
+                if reg_type == "personal":
+                    keyboard = [
+                        [InlineKeyboardButton("Name", callback_data="modify:name"),
+                         InlineKeyboardButton("Phone", callback_data="modify:phone"),
+                         InlineKeyboardButton("Email", callback_data="modify:email"),
+                         InlineKeyboardButton("Industry", callback_data="modify:industry")],
+                        [InlineKeyboardButton("🔙 Cancel", callback_data="cmd:cancel")]
+                    ]
+                else:
+                    keyboard = [
+                        [InlineKeyboardButton("Company", callback_data="modify:company"),
+                         InlineKeyboardButton("Phone", callback_data="modify:phone"),
+                         InlineKeyboardButton("Email", callback_data="modify:email")],
+                        [InlineKeyboardButton("Description", callback_data="modify:description"),
+                         InlineKeyboardButton("Manager", callback_data="modify:manager"),
+                         InlineKeyboardButton("Categories", callback_data="modify:categories")],
+                        [InlineKeyboardButton("Public Email", callback_data="modify:public"),
+                         InlineKeyboardButton("🔙 Cancel", callback_data="cmd:cancel")]
+                    ]
+                await query.edit_message_text(
+                    f"🌟 *{MESSAGES['modify_prompt']}* 🌟",
+                    parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
+        elif "modify:" in query.data:
+            field = query.data.split("modify:")[1]
+            reg_type = context.user_data.get("reg_type")
+            if reg_type == "personal":
+                context.user_data["personal_step"] = field if field != "industry" else "industry"
+                keyboard = [[InlineKeyboardButton("🔙 Cancel", callback_data="cmd:cancel")]]
+                if field == "industry":
+                    context.user_data["personal_data"]["Industries"] = []  # Reset industries
+                    keyboard = [[InlineKeyboardButton(cat, callback_data=f"ind:{cat}")] for cat in CATEGORIES]
+                    keyboard.append([InlineKeyboardButton("Done", callback_data="ind:done")])
+                    keyboard.append([InlineKeyboardButton("🔙 Cancel", callback_data="cmd:cancel")])
+                    await query.edit_message_text(
+                        f"🌟 *{MESSAGES['personal_industry']}* 🌟",
+                        parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
+                else:
+                    await query.edit_message_text(
+                        f"🌟 *Please provide your new {field} (Step {['name', 'phone', 'email'].index(field) + 1}/4):* 🌟",
+                        parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
+            else:
+                context.user_data["register_step"] = field if field != "categories" else "categories"
+                keyboard = [[InlineKeyboardButton("🔙 Cancel", callback_data="cmd:cancel")]]
+                if field == "categories":
+                    context.user_data["company_data"]["Categories"] = []  # Reset categories
+                    keyboard = [[InlineKeyboardButton(cat, callback_data=f"cat:{cat}")] for cat in CATEGORIES]
+                    keyboard.append([InlineKeyboardButton("Done", callback_data="cat:done")])
+                    keyboard.append([InlineKeyboardButton("🔙 Cancel", callback_data="cmd:cancel")])
+                    await query.edit_message_text(
+                        f"🌟 *{MESSAGES['categories_prompt']}* 🌟",
+                        parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
+                elif field == "public":
+                    keyboard = [
+                        [InlineKeyboardButton("Yes", callback_data="public:yes"),
+                         InlineKeyboardButton("No", callback_data="public:no")],
+                        [InlineKeyboardButton("🔙 Cancel", callback_data="cmd:cancel")]
+                    ]
+                    await query.edit_message_text(
+                        f"🌟 *{MESSAGES['public_prompt']}* 🌟",
+                        parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
+                else:
+                    step_map = {"company": 1, "phone": 2, "email": 3, "description": 4, "manager": 5}
+                    await query.edit_message_text(
+                        f"🌟 *Please provide your new {field} (Step {step_map[field]}/7):* 🌟",
+                        parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
         elif "page:" in query.data:
             parts = query.data.split(":")
             page = int(parts[1])
@@ -872,26 +1050,44 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     if user_row:
                         users_sheet.update_cell(user_row.row, 7, "Approved")
                     await query.edit_message_text(f"✅ Approved: {reg_data['name']} added!")
+                    keyboard = [
+                        [InlineKeyboardButton(MESSAGES["ask"], callback_data="cmd:ask"),
+                         InlineKeyboardButton(MESSAGES["resources"], callback_data="cmd:resources")],
+                        [InlineKeyboardButton(MESSAGES["training_events"], callback_data="cmd:training_events"),
+                         InlineKeyboardButton(MESSAGES["networking"], callback_data="cmd:networking")],
+                        [InlineKeyboardButton(MESSAGES["news"], callback_data="cmd:news"),
+                         InlineKeyboardButton(MESSAGES["contact"], callback_data="cmd:contact")],
+                        [InlineKeyboardButton(MESSAGES["subscribenews"], callback_data="cmd:subscribenews"),
+                         InlineKeyboardButton(MESSAGES["learn_startup_skills"], callback_data="cmd:learn_startup_skills")],
+                        [InlineKeyboardButton(MESSAGES["update_profile"], callback_data="cmd:update_profile")]
+                    ]
                     await context.bot.send_message(
                         reg_data["chat_id"],
-                        f"🌟 *{MESSAGES['registration_approved']}* 🌟",
+                        f"🌟 *{MESSAGES['registration_approved']}* 🌟\n{MESSAGES['options']}",
                         parse_mode="Markdown",
-                        reply_markup=InlineKeyboardMarkup([
-                            [InlineKeyboardButton("Main Menu", callback_data="cmd:main_menu")]
-                        ])
+                        reply_markup=InlineKeyboardMarkup(keyboard)
                     )
                 else:  # company
                     company_row = companies_sheet.find(reg_data["chat_id"], in_column=1)
                     if company_row:
                         companies_sheet.update_cell(company_row.row, 10, "Approved")
                     await query.edit_message_text(f"✅ Approved: {reg_data['company']} added!")
+                    keyboard = [
+                        [InlineKeyboardButton(MESSAGES["ask"], callback_data="cmd:ask"),
+                         InlineKeyboardButton(MESSAGES["resources"], callback_data="cmd:resources")],
+                        [InlineKeyboardButton(MESSAGES["training_events"], callback_data="cmd:training_events"),
+                         InlineKeyboardButton(MESSAGES["networking"], callback_data="cmd:networking")],
+                        [InlineKeyboardButton(MESSAGES["news"], callback_data="cmd:news"),
+                         InlineKeyboardButton(MESSAGES["contact"], callback_data="cmd:contact")],
+                        [InlineKeyboardButton(MESSAGES["subscribenews"], callback_data="cmd:subscribenews"),
+                         InlineKeyboardButton(MESSAGES["learn_startup_skills"], callback_data="cmd:learn_startup_skills")],
+                        [InlineKeyboardButton(MESSAGES["update_profile"], callback_data="cmd:update_profile")]
+                    ]
                     await context.bot.send_message(
                         reg_data["chat_id"],
-                        f"🌟 *{MESSAGES['registration_approved']}* 🌟",
+                        f"🌟 *{MESSAGES['registration_approved']}* 🌟\n{MESSAGES['options']}",
                         parse_mode="Markdown",
-                        reply_markup=InlineKeyboardMarkup([
-                            [InlineKeyboardButton("Main Menu", callback_data="cmd:main_menu")]
-                        ])
+                        reply_markup=InlineKeyboardMarkup(keyboard)
                     )
             else:
                 await query.edit_message_text("⚠️ Registration no longer pending.")
@@ -1081,7 +1277,7 @@ async def update_profile(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "Name": row[1],
             "Phone": row[2],
             "Email": row[3],
-            "Industry": row[4]
+            "Industries": row[4].split(", ") if row[4] else []
         }
         keyboard = [[InlineKeyboardButton("🔙 Cancel", callback_data="cmd:cancel")]]
         await query.edit_message_text(
@@ -1107,76 +1303,34 @@ async def update_profile(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"🌟 *{MESSAGES['company_prompt']}* 🌟\nCurrent: {row[1]}",
             parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
     else:
-        await query.edit_message_text("⚠️ No profile found. Please register first.", parse_mode="Markdown")
+        await query.edit_message_text(
+            "⚠️ No profile found. Please register first.",
+            parse_mode="Markdown"
+        )
 
 async def all_resources(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
-    links = []
+    sections = []
     for training in PAST_TRAININGS:
+        links = []
         if training.get("video"):
-            links.append(f"📹 *{training['name']}* Video: {training['video']}")
+            links.append(f"📹 [Video]({training['video']})")
         if training.get("resources"):
-            links.append(f"📄 *{training['name']}* Resource: {training['resources']}")
-    keyboard = [[InlineKeyboardButton("🔙 Back to Main Menu", callback_data="cmd:main_menu")]]
-    await query.message.reply_text(
-        f"🌟 *All Resources* 🌟\n\n" + "\n".join(links),
-        parse_mode="Markdown",
-        disable_web_page_preview=True,
-        reply_markup=InlineKeyboardMarkup(keyboard)
-    )
-
-async def cancel_registration(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    context.user_data.clear()
-    keyboard = [[InlineKeyboardButton("🔙 Back to Start", callback_data="cmd:start_over")]]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    await query.edit_message_text(
-        f"🌟 *Registration cancelled. Use /start to try again!* 🌟",
-        parse_mode="Markdown",
-        reply_markup=reply_markup
-    )
-
-async def start_over(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await start(update, context)
-
-def schedule_notifications(app):
-    for training in UPCOMING_TRAININGS:
-        date = datetime.strptime(training["date"], "%Y-%m-%d")
-        notify_date = date - timedelta(days=7)
-        if notify_date > datetime.now():
-            scheduler.add_job(
-                lambda: notify_training(app, training["name"], training["date"]),
-                "date", run_date=notify_date
-            )
-
-async def notify_training(app, name, date):
-    for row in training_sheet.get_all_records():
-        chat_id = row["ChatID"]
-        keyboard = [[InlineKeyboardButton("🔙 Back to Main Menu", callback_data="cmd:main_menu")]]
-        await app.bot.send_message(
-            chat_id, 
-            f"🌟 Reminder: *{name}* training on _{date}_ is in 7 days! Reply /training_events for details.", 
-            parse_mode="Markdown", 
-            reply_markup=InlineKeyboardMarkup(keyboard)
-        )
+            links.append(f"📄 [Resources]({training['resources']})")
+        section = f"✨ *{training['name']}*: {' | '.join(links)}"
+        sections.append(section)
+    text = f"🌟 *All Resources* 🌟\n\n" + "\n".join(sections)
+    keyboard = [[InlineKeyboardButton("🔙 Back to Resources", callback_data="cmd:resources")]]
+    await query.edit_message_text(text, parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
 
 def main():
-    app = Application.builder().token(os.environ["TELEGRAM_TOKEN"]).build()
-    init_bot_data(app)
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("signup", signup))
-    app.add_handler(CommandHandler("register", register))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_reply))
-    app.add_handler(CallbackQueryHandler(button))
-    schedule_notifications(app)
-    port = int(os.environ.get("PORT", 8080))
-    app.run_webhook(
-        listen="0.0.0.0",
-        port=port,
-        url_path="/bot",
-        webhook_url=f"https://{os.environ['RENDER_EXTERNAL_HOSTNAME']}/bot"
-    )
-    print("Bot is running on Render...")
+    application = Application.builder().token(os.environ.get("TELEGRAM_BOT_TOKEN")).build()
+    application.bot_data["scheduler"] = scheduler
+    init_bot_data(application)
+    application.add_handler(CommandHandler("start", start))
+    application.add_handler(CallbackQueryHandler(button))
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_reply))
+    application.run_polling()
 
 if __name__ == "__main__":
     main()
