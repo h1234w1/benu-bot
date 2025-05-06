@@ -117,7 +117,7 @@ MESSAGES = {
     "subscribenews": "News updates",
     "learn_startup_skills": "Learn Startup Skills",
     "update_profile": "Update Profile",
-    "ask_prompt": "Please type your question, and I’ll get an answer for you!",
+    "ask_prompt": "Please type your question, and I will get an answer for you!",
     "ask_error": "Sorry, I’m having trouble answering right now. Try again later!",
     "resources_title": "Available Training Resources:",
     "no_resources": "No resources available yet.",
