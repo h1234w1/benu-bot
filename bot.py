@@ -9,18 +9,6 @@ import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 import telegram.error
-from flask import Flask
-import threading
-
-# Flask for health check
-app_flask = Flask(__name__)
-
-@app_flask.route('/health')
-def health():
-    return {"status": "healthy"}, 200
-
-def run_flask():
-    app_flask.run(host="0.0.0.0", port=8080)
 
 # Initialize bot data
 def init_bot_data(context):
@@ -93,7 +81,7 @@ TRAINING_MODULES = [
         "quiz": [
             {"q": "What defines your brand?", "options": ["Logo", "Values", "Price"], "answer": "Values", "explain": "Values shape your brand’s identity and customer trust."},
             {"q": "Who is your target market?", "options": ["Everyone", "Specific Group", "Competitors"], "answer": "Specific Group", "explain": "A specific group helps tailor your marketing effectively."},
-            {"q": "What’s a low-cost promotion?", "options": ["TV Ads", "Social Media", "Billboards"], "answer": "Social Media", "explain": "Social media reaches wide audiences cheaply."}
+            {"q": "What’s a low-cost promotion?", "options": ["TV Ads", "Social Media", "Billboards"], "answer": "Social Media", "explain": "Social media reaches<|control102|> audiences cheaply."}
         ]
     },
     {
@@ -798,7 +786,7 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "Sorry, that button timed out. Please try again!", 
             reply_markup=InlineKeyboardMarkup(keyboard))
 
-# Other existing functions (unchanged or minimally adjusted)
+# Other existing functions (unchanged)
 async def resources(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     sections = []
@@ -1026,9 +1014,6 @@ def main():
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_reply))
     app.add_handler(CallbackQueryHandler(button))
     schedule_notifications(app)
-    # Start Flask in a separate thread
-    flask_thread = threading.Thread(target=run_flask)
-    flask_thread.start()
     port = int(os.environ.get("PORT", 8080))
     app.run_webhook(
         listen="0.0.0.0",

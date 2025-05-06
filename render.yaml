@@ -19,4 +19,3 @@ services:
           property: hostname
       - key: PYTHON_VERSION
         value: 3.11
-    healthCheckPath: /health
