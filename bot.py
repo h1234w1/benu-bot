@@ -177,7 +177,7 @@ MESSAGES = {
     "network_showcase": "Startup of the Month: {company}\n{description}",
     "personal_name": "Please provide your full name (Step 1/4):",
     "personal_industry": "Select your industry of interest (Step 4/4):",
-    "registration_submitted": "Approval requested. You’ll be notified soon!",
+    "registration_submitted": "Approval requested. You will be notified soon!",
     "registration_approved": "Your registration has been approved! Welcome!",
     "registration_rejected": "Your registration was not approved. Please contact support."
 }
